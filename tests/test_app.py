@@ -46,33 +46,52 @@ def test_player_page_switches_player() -> None:
     assert not at.exception, [e.value for e in at.exception]
 
 
-PHASES = ["run", "gather", "rise", "dunk", "fall", "land"]
+JOINTS = ["thighL", "thighR", "shinL", "shinR",
+          "upperL", "upperR", "foreL", "foreR", "trunk"]
+POSES = ["GATHER", "RISE", "DUNK", "FALL", "LAND", "REST"]
 
 
 def test_banner_markup_is_complete() -> None:
-    """Every phase the sequencer toggles must have poses defined for it."""
     import banner
 
     html = banner._TEMPLATE
-    for key, val in (("__SURFACE__", "#fcfcfb"), ("__INK__", "#0b0b0b")):
-        assert key in html, f"{key} placeholder missing from the template"
 
-    for phase in PHASES:
-        assert f".banner.{phase} " in html, f"no CSS poses for the {phase!r} phase"
-        assert f"only('{phase}')" in html, f"sequencer never enters {phase!r}"
+    # Every joint needs an explicit view-box pivot. The CSS default pivots on
+    # each group's bounding box, which is nowhere near the joint, and the
+    # figure comes apart the moment anything rotates. Selectors are grouped
+    # (`#shinL, #shinR { ... }`), so collect whatever each pivot rule targets.
+    pivoted: set[str] = set()
+    for sel in re.findall(r"([^{}]+)\{[^{}]*transform-origin:[^{}]*\}", html):
+        pivoted.update(re.findall(r"#(\w+)", sel))
 
-    # Each joint the poses drive needs an explicit view-box pivot; the CSS
-    # default pivots on the bounding box and tears the figure apart.
-    for joint in ("thighL", "thighR", "shinL", "shinR",
-                  "upperL", "upperR", "foreL", "foreR", "trunk"):
-        assert re.search(rf"#{joint}\s*\{{\s*transform-origin:", html), \
-            f"{joint} has no explicit pivot"
+    for joint in JOINTS:
+        assert joint in pivoted, f"{joint} has no explicit pivot"
         assert f'id="{joint}"' in html, f"{joint} not in the markup"
 
     # A transform attribute on an element that also gets a CSS transform is
-    # silently discarded, so the moving groups must not carry one.
+    # discarded wholesale, so anything that moves keeps its offset elsewhere.
     for moving in ('<g id="rig" transform=', '<g id="defender" transform='):
         assert moving not in html, f"{moving!r} would be overridden by CSS"
+
+
+def test_banner_is_a_pure_function_of_progress() -> None:
+    """Scrubbing only works if every pose is keyed off t, with no wall clock."""
+    import banner
+
+    html = banner._TEMPLATE
+    assert "function frame(t)" in html, "no frame(t) entry point to scrub"
+    for pose in POSES:
+        assert re.search(rf"var {pose}\s*=\s*\{{", html), f"{pose} pose missing"
+        for joint in JOINTS:
+            assert f"{joint}:" in html.split(f"var {pose}")[1][:400], \
+                f"{pose} does not set {joint}"
+
+    # Scroll has to drive it, and there must be a fallback when the parent
+    # document is unreachable.
+    assert "addEventListener('scroll'" in html, "nothing listens for scroll"
+    assert "window.parent.document" in html, "never reads the parent scroller"
+    assert "loopStart" in html, "no fallback when the parent is unreadable"
+    assert "prefers-reduced-motion" in html, "no reduced-motion path"
 
 
 def test_banner_renders_without_placeholders(monkeypatch) -> None:

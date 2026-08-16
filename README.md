@@ -4,6 +4,20 @@
 
 **AQX Sports Analytics Data Bowl 3.0**
 
+### In plain English
+
+Two players score the same. One of them is a better shooter. The other just takes
+easier shots. Nothing in the box score tells you which is which.
+
+Shot Diet reads a million NBA shots and splits every player's scoring into those two
+things: **the quality of the shots he gets**, and **how well he makes them**. Then it
+answers the question a coach actually cares about: which of the two can you change?
+
+The answer turns out to be lopsided, and the tool that came out of it recommends the
+opposite of what you would expect.
+
+---
+
 Every field goal attempt is two decisions welded together: **what shot the offence
 generated**, and **whether the player put it in**. Points per shot mixes them, so a
 centre who only dunks looks like a great shooter and a guard manufacturing late-clock
