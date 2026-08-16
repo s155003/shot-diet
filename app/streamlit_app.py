@@ -21,15 +21,15 @@ st.markdown(f"""
   html, body, [class*="css"] {{ font-family: {T.FONT}; }}
   h1, h2, h3 {{ color: {T.INK}; letter-spacing: -0.01em; }}
   .lede {{ color: {T.INK_2}; font-size: 1.05rem; line-height: 1.6; max-width: 70ch; }}
-  .kpi {{ background: {T.SURFACE}; border: 1px solid rgba(11,11,11,0.10);
-          border-radius: 10px; padding: 16px 18px; height: 100%; }}
+  .kpi {{ background: {T.SURFACE}; border: 1px solid rgba(11,11,11,0.12);
+          border-radius: 3px; padding: 16px 18px; height: 100%; }}
   .kpi .label {{ color: {T.MUTED}; font-size: 0.78rem; text-transform: uppercase;
                  letter-spacing: 0.06em; }}
   .kpi .value {{ color: {T.INK}; font-size: 2.0rem; font-weight: 650;
                  line-height: 1.15; margin: 4px 0 2px; }}
   .kpi .foot {{ color: {T.INK_2}; font-size: 0.85rem; line-height: 1.45; }}
-  .callout {{ background: {T.SURFACE}; border-left: 3px solid {T.SERIES[0]};
-              border-radius: 6px; padding: 14px 18px; color: {T.INK_2};
+  .callout {{ background: {T.SURFACE}; border: 1px solid rgba(11,11,11,0.12);
+              border-radius: 3px; padding: 16px 20px; color: {T.INK_2};
               font-size: 0.97rem; line-height: 1.6; }}
   .note {{ color: {T.MUTED}; font-size: 0.84rem; line-height: 1.5; }}
   [data-testid="stMetricValue"] {{ font-size: 1.6rem; }}
@@ -48,7 +48,7 @@ LATEST = SEASONS[0]
 
 PAGES = ["The finding", "Players", "Shot-diet optimiser", "Teams", "Method & validation"]
 with st.sidebar:
-    st.markdown("### 🏀 Shot Diet")
+    st.markdown("### Shot Diet")
     st.caption("Separating shot selection from shot making")
     page = st.radio("Section", PAGES, label_visibility="collapsed")
     st.divider()
@@ -62,14 +62,14 @@ with st.sidebar:
 # 1. the finding
 # ==========================================================================
 if page == "The finding":
-    st.title("Coach the diet, not the shooter")
+    st.title("Which half of a shot can you actually coach?")
     st.markdown(
         '<p class="lede">Every field goal attempt is two decisions layered on top '
         'of each other: <b>what shot the offence generated</b>, and <b>whether the '
         'player put it in</b>. Box-score efficiency welds them together, so a centre '
         'who only dunks looks like a great shooter and a guard creating late-clock '
-        'jumpers looks like a bad one. This project separates them, then asks which '
-        'half a team can actually act on.</p>', unsafe_allow_html=True)
+        'jumpers looks like a bad one. This project separates the two, then measures '
+        'how much of each one a team can move.</p>', unsafe_allow_html=True)
 
     sh = D.table("split_half").set_index("metric")
     yoy = D.table("yoy").set_index("metric")
@@ -123,7 +123,7 @@ if page == "The finding":
         corr = SUM.get("corr_selection_making", 0)
         st.markdown(
             f'<div class="callout">In any single season the two components look '
-            f'equally important — selection varies across players with a standard '
+            f'equally important. Selection varies across players with a standard '
             f'deviation of <b>{sel_sd:.1f}</b> points per 100 shots, making by '
             f'<b>{mak_sd:.1f}</b>. Strip out the measurement noise and the picture '
             f'changes: <b>{sel_rep:.1f}</b> of the selection spread is real against '
@@ -133,8 +133,8 @@ if page == "The finding":
             f'they take.<br><br>The two also pull against each other '
             f'(r = <b>{corr:+.2f}</b>). Players handed the easiest shots tend to be '
             f'the weaker shot-makers, and the best shot-makers are handed the hardest '
-            f'ones — which is exactly why raw points-per-shot flatters the first group '
-            f'and punishes the second.</div>', unsafe_allow_html=True)
+            f'ones. That is why raw points-per-shot flatters the first group and '
+            f'punishes the second.</div>', unsafe_allow_html=True)
         ps = D.table("player_season")
         d = ps[(ps["SEASON"] == LATEST) & (ps["fga"] >= 200)]
         show = ["Nikola Jokić", "DeMar DeRozan", "Rudy Gobert", "Luka Dončić",
@@ -146,7 +146,7 @@ if page == "The finding":
                  "making_p100"]].copy()
         ex.columns = ["Player", "Team", "FGA", "Pts/shot", "Selection /100",
                       "Making /100"]
-        st.markdown(f"**Same league, opposite jobs — {LATEST}**")
+        st.markdown(f"**Same league, opposite jobs ({LATEST})**")
         st.dataframe(
             ex.style.format({"FGA": "{:.0f}", "Pts/shot": "{:.3f}",
                              "Selection /100": "{:+.1f}", "Making /100": "{:+.1f}"})
@@ -186,8 +186,8 @@ if page == "The finding":
             f'<b>nothing</b>. A prescription built from a player\'s own '
             f'shrunk zone-by-zone shooting beats generic league-average advice by '
             f'<b>{eb_v_lg["mean_p100"]:+.2f}</b> points per 100 '
-            f'(95% CI {eb_v_lg["ci_low"]:+.2f} to {eb_v_lg["ci_high"]:+.2f}) — '
-            f'indistinguishable from zero, and the two prescriptions genuinely differ '
+            f'(95% CI {eb_v_lg["ci_low"]:+.2f} to {eb_v_lg["ci_high"]:+.2f}), which is '
+            f'indistinguishable from zero. The two prescriptions genuinely differ '
             f'for about half the league.<br><br>'
             f'Trusting a player\'s raw hot zones is actively worse '
             f'(<b>{eb_v_raw["mean_p100"]:+.2f}</b> points per 100 for the shrunk version '
@@ -196,8 +196,8 @@ if page == "The finding":
             unsafe_allow_html=True)
         st.markdown(
             '<p class="note" style="margin-top:14px"><b>The practical upshot.</b> '
-            'Shot quality is a scheme problem, not a personnel problem. Spend the '
-            'coaching capital on where shots come from — it shows up in eleven '
+            'Shot quality belongs to the scheme far more than to the roster. Spend '
+            'the coaching capital on where shots come from: it shows up in eleven '
             'attempts and it persists across seasons. Do not build a personalised '
             'shot-diet plan off one season of shooting splits; you will be coaching '
             'noise.</p>', unsafe_allow_html=True)
@@ -263,7 +263,7 @@ elif page == "Players":
             shots = D.table("shots_latest")
             his = shots[shots["PLAYER_NAME"] == who]
             st.plotly_chart(
-                court.hex_shot_chart(his, shots, title=f"{who} — {season}"),
+                court.hex_shot_chart(his, shots, title=f"{who}, {season}"),
                 use_container_width=True)
             st.markdown('<p class="note">Hexagon area is attempt volume; colour is '
                         'points per shot against what the league scores from that same '
@@ -287,7 +287,7 @@ elif page == "Players":
                                        "League pts/att": "{:.2f}", "Att": "{:.0f}"}),
                      use_container_width=True, hide_index=True, height=250)
         st.markdown('<p class="note">"Shrunk" blends the player\'s own rate toward the '
-                    'league rate in proportion to how little we have seen — the '
+                    'league rate in proportion to how little we have seen. It is the '
                     'correction that keeps a 12-for-20 stretch from being read as a '
                     'skill.</p>', unsafe_allow_html=True)
 
@@ -356,7 +356,7 @@ elif page == "Shot-diet optimiser":
     m[3].metric("Points gained over the season",
                 f"{(new_pps - cur_pps) * fga:+.0f}")
     if fga < 400:
-        st.caption("Low volume — treat the season-points figure with care.")
+        st.caption("Low volume: treat the season-points figure with care.")
 
     det = pd.DataFrame({
         "zone": ZONE_ORDER, "att": att, "share": shares, "new_share": new_shares,
@@ -390,7 +390,7 @@ elif page == "Shot-diet optimiser":
             f'<p class="note" style="margin-top:16px"><b>Read this with the caveat '
             f'from the finding.</b> Out of sample, this personalised prescription is '
             f'no better than the same move computed from league-average zone values '
-            f'alone. The gain is real; the personalisation is not.</p>',
+            f'alone. The move earns its points; tailoring it to him does not.</p>',
             unsafe_allow_html=True)
 
     st.divider()
@@ -466,8 +466,8 @@ else:
         '<i>league-average</i> shooter converts it, which times the shot\'s point value '
         'gives expected points per shot (xPPS). Averaged over a player\'s season:'
         '<br><br><code>PPS − league PPS  =  (xPPS − league PPS)  +  (PPS − xPPS)</code>'
-        '<br><br>The first term is <b>shot selection</b> — what the diet is worth in '
-        'average hands. The second is <b>shot making</b> — what the shooter added on '
+        '<br><br>The first term is <b>shot selection</b>, what the diet is worth in '
+        'average hands. The second is <b>shot making</b>, what the shooter added on '
         'top. They sum exactly to the player\'s efficiency above league average.</div>',
         unsafe_allow_html=True)
 
@@ -505,15 +505,15 @@ else:
         st.markdown(
             f"""
 - **No player grades himself.** Every prediction used to evaluate a player is
-  out-of-fold, and the folds are grouped by player ID — the model scoring a
+  out-of-fold, and the folds are grouped by player ID, so the model scoring a
   player has never seen one of his shots. Without this, a high-volume specialist
   partly sets his own benchmark.
 - **Clock-management shots removed.** {SUM.get('n_excluded_backcourt_or_heave', 0):,}
   backcourt attempts and buzzer heaves are dropped; they are not shot selection.
 - **Zones kept coarse on purpose.** An earlier ten-zone scheme split left from
   right, and the empirical-Bayes prior strength swung from k = 199 on one wing to
-  k = 2018 on the other for the same shot — binomial noise, not a real talent
-  difference. Six zones keep every bucket well sampled.
+  k = 2018 on the other for the same shot. That is binomial noise rather than a
+  real talent difference. Six zones keep every bucket well sampled.
 - **Rates are shrunk, not trusted.** Player zone rates are blended toward the
   league by a method-of-moments beta-binomial prior, so only the spread that
   exceeds binomial noise is treated as talent.
@@ -543,7 +543,7 @@ else:
         gaps = D.table("sensitivity_gaps")
         with st.expander("Robustness: is the null just a tight constraint?"):
             st.markdown(
-                "The headline null — personalising the prescription adds nothing — "
+                "The headline null, that personalising the prescription adds nothing, "
                 "would be an artefact if the move budget were so small that every "
                 "variant made the same move. It is not. The null holds from a 3% to a "
                 "20% budget, while the empirical-Bayes and league-average "
@@ -570,8 +570,8 @@ else:
     st.subheader("What this cannot see")
     st.markdown("""
 - **No defender.** The public feed carries no defender distance or closeout data,
-  so "selection" here means shot location, play type and clock — not whether the
-  shot was open. Some of what lands in *making* is really a player's ability to
+  so "selection" here means shot location, play type and clock, but not whether
+  the shot was open. Some of what lands in *making* is really a player's ability to
   generate separation, which is itself a skill the model cannot attribute.
 - **Play type is a coarse proxy.** `ACTION_TYPE` is recorded by human scorers and
   its categories blur (a "Driving Floating Jump Shot" covers a lot of ground).

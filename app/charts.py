@@ -124,8 +124,8 @@ def selection_vs_making(ps: pd.DataFrame, highlight: list[str] | None = None,
                            align="right" if right else "left")
 
     return T.style(fig, height=520, showlegend=False,
-                   xtitle="Shot selection — points per 100 from the diet",
-                   ytitle="Shot making — points per 100 above expectation")
+                   xtitle="Shot selection (points per 100 from the diet)",
+                   ytitle="Shot making (points per 100 above expectation)")
 
 
 def zone_prescription(det: pd.DataFrame, zone_order: list[str]) -> go.Figure:
@@ -226,5 +226,5 @@ def team_scatter(ts: pd.DataFrame) -> go.Figure:
         pad = (hi - lo) * 0.12
         upd(range=[lo - pad, hi + pad])
     return T.style(fig, height=560, showlegend=False,
-                   xtitle="Shot selection — points per 100 from the diet",
-                   ytitle="Shot making — points per 100 above expectation")
+                   xtitle="Shot selection (points per 100 from the diet)",
+                   ytitle="Shot making (points per 100 above expectation)")
