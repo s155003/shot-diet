@@ -1,16 +1,9 @@
-"""Editorial layer: type system, Streamlit chrome overrides, page furniture.
+"""Interface layer: type scale, Streamlit chrome overrides, page furniture.
 
-Two rules drive everything here.
-
-Numbers are not decoration. A figure belongs inside a sentence or inside a
-chart, where it carries context. Bare stat tiles make a reader parse four
-unrelated quantities before they know what the page is about, so the landing
-page states its argument in words and keeps the precise values one click away
-behind `reveal()`.
-
-Chrome recedes. Hairline rules instead of boxes, one accent colour, a single
-prose measure, and Streamlit's stock header, slider bubbles and heat-mapped
-tables all toned down or removed.
+This is a reference tool, not an article. Nothing renders until the reader asks
+for it, prose is limited to what a label cannot say on its own, and the tables
+are the point rather than an appendix to it. Figures are set at reading size in
+dense rows instead of in hero tiles.
 """
 from __future__ import annotations
 
@@ -21,9 +14,6 @@ import streamlit as st
 
 import theme as T
 
-MEASURE = "68ch"          # prose line length
-_TYPE_SCALE = {"h1": "2.05rem", "h2": "1.30rem", "h3": "1.02rem"}
-
 
 def boot() -> None:
     """Inject the stylesheet. Call once, immediately after set_page_config."""
@@ -31,7 +21,7 @@ def boot() -> None:
 
 
 # --------------------------------------------------------------------------
-# page furniture
+# furniture
 # --------------------------------------------------------------------------
 
 def kicker(text: str) -> None:
@@ -39,28 +29,18 @@ def kicker(text: str) -> None:
 
 
 def title(text: str, sub: str = "") -> None:
-    st.markdown(f'<h1 class="ed-h1">{text}</h1>', unsafe_allow_html=True)
+    st.markdown(f'<h1 class="h1">{text}</h1>', unsafe_allow_html=True)
     if sub:
-        lede(sub)
+        note(sub)
 
 
-def lede(text: str) -> None:
-    st.markdown(f'<p class="lede">{text}</p>', unsafe_allow_html=True)
+def section(text: str) -> None:
+    st.markdown(f'<h2 class="h2">{text}</h2>', unsafe_allow_html=True)
 
 
-def para(text: str) -> None:
-    st.markdown(f'<p class="para">{text}</p>', unsafe_allow_html=True)
-
-
-def section(text: str, sub: str = "") -> None:
-    st.markdown(f'<h2 class="ed-h2">{text}</h2>', unsafe_allow_html=True)
-    if sub:
-        st.markdown(f'<p class="para">{sub}</p>', unsafe_allow_html=True)
-
-
-def rule(space: int = 26) -> None:
-    st.markdown(f'<hr class="ed-rule" style="margin:{space}px 0">',
-                unsafe_allow_html=True)
+def note(text: str) -> None:
+    """One line of clarification. Not a paragraph."""
+    st.markdown(f'<p class="note">{text}</p>', unsafe_allow_html=True)
 
 
 def caption(text: str, top: int = 6) -> None:
@@ -68,14 +48,26 @@ def caption(text: str, top: int = 6) -> None:
                 unsafe_allow_html=True)
 
 
-def pull(text: str) -> None:
-    """A quiet emphasis block. Used sparingly, for the one claim that matters."""
-    st.markdown(f'<p class="pull">{text}</p>', unsafe_allow_html=True)
+def rule(space: int = 22) -> None:
+    st.markdown(f'<hr class="hr" style="margin:{space}px 0">',
+                unsafe_allow_html=True)
+
+
+def statline(pairs: list[tuple[str, str]]) -> None:
+    """A dense label/value strip. The summary row on a reference page."""
+    cells = "".join(
+        f'<div class="sl-cell"><span class="sl-k">{k}</span>'
+        f'<span class="sl-v">{v}</span></div>' for k, v in pairs)
+    st.markdown(f'<div class="statline">{cells}</div>', unsafe_allow_html=True)
+
+
+def empty(text: str) -> None:
+    """Placeholder shown before the reader has searched for anything."""
+    st.markdown(f'<div class="empty">{text}</div>', unsafe_allow_html=True)
 
 
 @contextmanager
-def reveal(label: str = "Show the numbers"):
-    """Progressive disclosure: exact figures stay collapsed until asked for."""
+def reveal(label: str):
     with st.expander(label, expanded=False):
         yield
 
@@ -87,9 +79,7 @@ def figure(fig, cap: str = "", **kwargs) -> None:
 
 
 def table(df: pd.DataFrame, fmt: dict | None = None, height: int | None = None) -> None:
-    """A plain table. No heat maps: the colour was fighting the charts."""
-    styled = df.style.format(fmt or {})
-    st.dataframe(styled, width="stretch", hide_index=True,
+    st.dataframe(df.style.format(fmt or {}), width="stretch", hide_index=True,
                  **({"height": height} if height else {}))
 
 
@@ -100,61 +90,55 @@ _CSS = f"""
       background: transparent; height: 0; visibility: hidden; }}
   #MainMenu, footer, [data-testid="stDecoration"] {{ display: none; }}
   [data-testid="stMain"] {{ background: {T.PLANE}; }}
-  .block-container {{ padding-top: 2.4rem; padding-bottom: 5rem;
-                      max-width: 1180px; }}
+  .block-container {{ padding-top: 2.1rem; padding-bottom: 4rem;
+                      max-width: 1280px; }}
 
   /* ---------- type ---------- */
   html, body, [class*="css"], .stMarkdown {{
-      font-family: {T.FONT};
-      -webkit-font-smoothing: antialiased; }}
+      font-family: {T.FONT}; -webkit-font-smoothing: antialiased; }}
 
-  .kicker {{ color: {T.MUTED}; font-size: 0.70rem; font-weight: 620;
-             letter-spacing: 0.14em; text-transform: uppercase;
-             margin: 0 0 10px; }}
+  .kicker {{ color: {T.MUTED}; font-size: 0.68rem; font-weight: 620;
+             letter-spacing: 0.15em; text-transform: uppercase; margin: 0 0 8px; }}
+  .h1, h1 {{ color: {T.INK}; font-size: 1.62rem !important; font-weight: 660;
+             letter-spacing: -0.018em; line-height: 1.2; margin: 0 0 6px; }}
+  .h2, h2 {{ color: {T.INK}; font-size: 1.04rem !important; font-weight: 640;
+             letter-spacing: -0.008em; margin: 0 0 8px; }}
+  h3 {{ color: {T.INK}; font-size: 0.95rem !important; font-weight: 640; }}
+  .note {{ color: {T.INK_2}; font-size: 0.90rem; line-height: 1.5;
+           max-width: 88ch; margin: 0 0 4px; }}
+  .cap {{ color: {T.MUTED}; font-size: 0.78rem; line-height: 1.5;
+          max-width: 92ch; margin: 6px 0 0; }}
+  .hr {{ border: none; border-top: 1px solid {T.GRID}; }}
 
-  .ed-h1, h1 {{ color: {T.INK}; font-size: {_TYPE_SCALE['h1']} !important;
-                font-weight: 660; letter-spacing: -0.021em; line-height: 1.16;
-                margin: 0 0 14px; max-width: 30ch; }}
+  /* ---------- summary strip ---------- */
+  .statline {{ display: flex; flex-wrap: wrap; gap: 0;
+               border: 1px solid {T.GRID}; border-radius: 2px;
+               background: {T.SURFACE}; margin: 2px 0 14px; }}
+  .sl-cell {{ padding: 9px 18px; border-right: 1px solid {T.GRID};
+              display: flex; flex-direction: column; gap: 2px; min-width: 96px; }}
+  .sl-cell:last-child {{ border-right: none; }}
+  .sl-k {{ color: {T.MUTED}; font-size: 0.66rem; font-weight: 620;
+           letter-spacing: 0.09em; text-transform: uppercase; }}
+  .sl-v {{ color: {T.INK}; font-size: 1.02rem; font-weight: 640;
+           font-variant-numeric: tabular-nums; }}
 
-  .ed-h2, h2 {{ color: {T.INK}; font-size: {_TYPE_SCALE['h2']} !important;
-                font-weight: 640; letter-spacing: -0.012em; line-height: 1.3;
-                margin: 0 0 10px; }}
-  h3 {{ color: {T.INK}; font-size: {_TYPE_SCALE['h3']} !important;
-        font-weight: 640; letter-spacing: -0.004em; }}
-
-  .lede {{ color: {T.INK_2}; font-size: 1.06rem; line-height: 1.62;
-           max-width: {MEASURE}; margin: 0 0 6px; }}
-  .para {{ color: {T.INK_2}; font-size: 0.97rem; line-height: 1.7;
-           max-width: {MEASURE}; margin: 0 0 12px; }}
-  .cap  {{ color: {T.MUTED}; font-size: 0.80rem; line-height: 1.55;
-           max-width: 76ch; margin: 6px 0 0; }}
-
-  .pull {{ color: {T.INK}; font-size: 1.10rem; line-height: 1.55;
-           font-weight: 560; letter-spacing: -0.006em;
-           max-width: 60ch; margin: 18px 0;
-           padding-left: 16px; border-left: 2px solid {T.AXIS}; }}
-
-  /* a figure inside prose: same weight as the text around it */
-  .n {{ font-weight: 640; color: {T.INK}; font-variant-numeric: tabular-nums; }}
-
-  .ed-rule {{ border: none; border-top: 1px solid {T.GRID}; }}
+  .empty {{ border: 1px dashed {T.GRID}; border-radius: 2px; background: {T.SURFACE};
+            padding: 30px 22px; color: {T.MUTED}; font-size: 0.88rem;
+            line-height: 1.6; }}
 
   /* ---------- sidebar as a nav ----------
-     Streamlit nests the radio dot three divs deep inside the option label
-     (label > div > div > div:first-child); the label's own first child is the
-     visually-hidden input wrapper, so `label > div:first-child` misses it.
-     `data-selected` on the label is a cleaner active hook than :has(). */
+     The radio dot sits three divs deep inside the option label, so
+     `label > div:first-child` misses it and hits the hidden input wrapper.
+     `data-selected` is a sturdier active hook than :has(input:checked). */
   [data-testid="stSidebar"] {{ background: {T.SURFACE};
       border-right: 1px solid {T.GRID}; }}
-  [data-testid="stSidebar"] .block-container {{ padding-top: 2.2rem; }}
+  [data-testid="stSidebar"] .block-container {{ padding-top: 2rem; }}
   [data-testid="stSidebar"] [role="radiogroup"] {{ gap: 2px; }}
-  [data-testid="stRadioOption"] {{
-      padding: 7px 12px; border-radius: 2px; margin: 0;
-      transition: background .12s; cursor: pointer; }}
+  [data-testid="stRadioOption"] {{ padding: 6px 12px; border-radius: 2px;
+      margin: 0; transition: background .12s; cursor: pointer; }}
   [data-testid="stRadioOption"]:hover {{ background: {T.PLANE}; }}
   [data-testid="stRadioOption"] > div > div > div:first-child {{ display: none; }}
-  [data-testid="stRadioOption"] p {{
-      font-size: 0.92rem; color: {T.INK_2}; }}
+  [data-testid="stRadioOption"] p {{ font-size: 0.9rem; color: {T.INK_2}; }}
   [data-testid="stRadioOption"][data-selected="true"] {{
       background: {T.PLANE}; box-shadow: inset 2px 0 0 {T.SERIES[0]}; }}
   [data-testid="stRadioOption"][data-selected="true"] p {{
@@ -162,44 +146,39 @@ _CSS = f"""
 
   /* ---------- controls ---------- */
   [data-testid="stWidgetLabel"] p {{
-      font-size: 0.74rem !important; font-weight: 600; color: {T.MUTED};
-      letter-spacing: 0.07em; text-transform: uppercase; }}
-  [data-baseweb="select"] > div {{
+      font-size: 0.68rem !important; font-weight: 620; color: {T.MUTED};
+      letter-spacing: 0.09em; text-transform: uppercase; }}
+  /* This Streamlit build renders widgets through react-aria, not BaseWeb, so
+     `[data-baseweb="select"]`, `[data-baseweb="tag"]` and `[role="slider"]`
+     match nothing. The combobox shell is the role="group" inside stSelectbox;
+     the slider thumb takes its colour from theme.primaryColor in
+     .streamlit/config.toml, so it needs no rule here. */
+  [data-testid="stSelectbox"] [role="group"] {{
       border-color: {T.GRID} !important; border-radius: 2px !important;
-      background: {T.SURFACE} !important; font-size: 0.92rem; }}
-  [data-testid="stSlider"] [data-testid="stThumbValue"] {{
-      color: {T.INK_2}; font-size: 0.78rem; font-weight: 600; }}
-  [data-baseweb="slider"] [role="slider"] {{ background: {T.SERIES[0]}; }}
-  /* Multiselect pills ship as saturated blue chips, which outshout the chart
-     they are filtering. Neutral chip, coloured only by a leading rule. */
-  [data-baseweb="tag"] {{
-      background: {T.PLANE} !important; color: {T.INK} !important;
-      border: 1px solid {T.GRID} !important;
-      border-left: 2px solid {T.SERIES[0]} !important;
-      border-radius: 2px !important; font-size: 0.84rem !important; }}
-  [data-baseweb="tag"] span, [data-baseweb="tag"] svg {{
-      color: {T.INK_2} !important; fill: {T.INK_2} !important; }}
+      background: {T.SURFACE} !important; }}
+  [data-testid="stSelectbox"] input {{ font-size: 0.92rem; }}
+  [data-testid="stSliderThumbValue"] {{
+      color: {T.INK_2} !important; font-size: 0.76rem; font-weight: 620; }}
+  [data-testid="stBaseButton-secondary"] {{
+      border: 1px solid {T.GRID}; border-radius: 2px; background: {T.SURFACE};
+      color: {T.INK_2}; font-size: 0.84rem; padding: 3px 12px; }}
+  [data-testid="stBaseButton-secondary"]:hover {{
+      border-color: {T.SERIES[0]}; color: {T.SERIES[0]}; }}
 
-  /* ---------- progressive disclosure ---------- */
+  /* ---------- disclosure ---------- */
   [data-testid="stExpander"] {{ border: none !important; }}
-  [data-testid="stExpander"] details {{
-      border: none; border-top: 1px solid {T.GRID};
+  [data-testid="stExpander"] details {{ border: none; border-top: 1px solid {T.GRID};
       border-radius: 0; background: transparent; }}
-  [data-testid="stExpander"] summary {{
-      padding: 11px 0 !important; }}
+  [data-testid="stExpander"] summary {{ padding: 10px 0 !important; }}
   [data-testid="stExpander"] summary p {{
-      font-size: 0.76rem !important; font-weight: 620; color: {T.MUTED};
+      font-size: 0.74rem !important; font-weight: 620; color: {T.MUTED};
       letter-spacing: 0.09em; text-transform: uppercase; }}
   [data-testid="stExpander"] summary:hover p {{ color: {T.SERIES[0]}; }}
-  [data-testid="stExpander"] [data-testid="stExpanderDetails"] {{
-      padding-top: 2px; }}
 
-  /* ---------- tables ---------- */
-  [data-testid="stDataFrame"] {{ font-size: 0.86rem; }}
+  /* ---------- tables: the point of the page ---------- */
+  [data-testid="stDataFrame"] {{ font-size: 0.85rem; }}
   [data-testid="stDataFrame"] * {{ font-variant-numeric: tabular-nums; }}
 
-  /* ---------- misc ---------- */
-  [data-testid="stElementContainer"]:has(> iframe) {{ margin-bottom: 4px; }}
   hr {{ border-color: {T.GRID}; }}
   a {{ color: {T.SERIES[0]}; }}
 </style>

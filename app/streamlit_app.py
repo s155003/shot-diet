@@ -1,15 +1,15 @@
 """Shot Diet - separating shot selection from shot making in the NBA."""
 from __future__ import annotations
 
+import unicodedata
+
 import numpy as np
 import pandas as pd
 import streamlit as st
 
 import data_access as D  # noqa: F401  (also puts src/ on the path)
-import banner
 import charts as C
 import court
-import theme as T
 import ui
 from analyze import ZONE_POINTS, optimise_diet
 from config import ZONE_ORDER
@@ -21,304 +21,307 @@ ui.boot()
 SUM = D.summary()
 SEASONS = D.seasons()
 LATEST = SEASONS[0]
+PS = D.table("player_season")
 
 
-def n(v: str | float, fmt: str = "") -> str:
-    """A figure set inside running prose, never on its own."""
-    return f'<span class="n">{format(v, fmt) if fmt else v}</span>'
+def roster(season: str, min_fga: int = 100) -> list[str]:
+    d = PS[(PS["SEASON"] == season) & (PS["fga"] >= min_fga)]
+    return sorted(d["PLAYER_NAME"].unique())
 
 
-PAGES = ["The finding", "Players", "Shot-diet optimiser", "Teams", "Method & validation"]
+def signed(v: float, fmt: str = "+.1f") -> str:
+    return format(v, fmt)
+
+
+def fold(s: str) -> str:
+    """Lowercase and strip diacritics, so `jokic` finds `Jokić`."""
+    return "".join(ch for ch in unicodedata.normalize("NFKD", s.lower())
+                   if not unicodedata.combining(ch))
+
+
+def player_search(names: list[str], key: str, season: str,
+                  hint: str = "") -> str | None:
+    """Type-to-search with a result list. Returns a name once one is chosen.
+
+    A plain selectbox filters on the exact label, so a reader typing `jokic`
+    gets no results for `Nikola Jokić`. Folding both sides fixes that, and the
+    result list is closer to how a reference site behaves anyway.
+    """
+    sel_key, q_key = f"{key}_sel", f"{key}_q"
+    chosen = st.session_state.get(sel_key)
+    if chosen and chosen not in names:
+        chosen = st.session_state[sel_key] = None
+
+    if chosen:
+        c1, c2 = st.columns([6, 1])
+        c1.markdown(f'<p class="cap" style="margin:6px 0 0">Showing '
+                    f'<b style="color:{"#0b0b0b"}">{chosen}</b>, {season}</p>',
+                    unsafe_allow_html=True)
+        if c2.button("Clear", key=f"{key}_clear"):
+            st.session_state[sel_key] = None
+            st.session_state[q_key] = ""
+            st.rerun()
+        return chosen
+
+    q = st.text_input("Search", key=q_key, placeholder="Type a name, e.g. jokic",
+                      label_visibility="visible")
+    if not q or len(q.strip()) < 2:
+        ui.empty(hint or f"Start typing a player's name. Nothing loads until you "
+                         f"pick one.<br><br><span style='font-size:.8rem'>"
+                         f"{len(names):,} players in {season}.</span>")
+        return None
+
+    fq = fold(q.strip())
+    hits = [nm for nm in names if fq in fold(nm)]
+    if not hits:
+        ui.empty(f"No player matching <b>{q}</b> in {season}.")
+        return None
+    if len(hits) == 1:
+        st.session_state[sel_key] = hits[0]
+        st.rerun()
+
+    ui.caption(f"{len(hits)} matches", top=10)
+    for i, nm in enumerate(hits[:12]):
+        r = PS[(PS["SEASON"] == season) & (PS["PLAYER_NAME"] == nm)].iloc[0]
+        c = st.columns([3, 1, 1, 1, 1])
+        if c[0].button(nm, key=f"{key}_hit{i}", width="stretch"):
+            st.session_state[sel_key] = nm
+            st.rerun()
+        c[1].markdown(f'<p class="cap">{r["team"]}</p>', unsafe_allow_html=True)
+        c[2].markdown(f'<p class="cap">{r["fga"]:,.0f} FGA</p>',
+                      unsafe_allow_html=True)
+        c[3].markdown(f'<p class="cap">{r["pps"]:.3f} pts/shot</p>',
+                      unsafe_allow_html=True)
+        c[4].markdown(f'<p class="cap">{r["total_pts"]:+.0f} added</p>',
+                      unsafe_allow_html=True)
+    if len(hits) > 12:
+        ui.caption(f"…and {len(hits) - 12} more. Narrow the search.")
+    return None
+
+
+PAGES = ["Search", "Leaders", "Teams", "Shot-diet optimiser", "Findings", "Method"]
 with st.sidebar:
-    st.markdown(f'<p class="kicker" style="margin-bottom:4px">Shot Diet</p>'
-                f'<p class="cap" style="margin:0 0 18px">Separating shot selection '
-                f'from shot making</p>', unsafe_allow_html=True)
+    st.markdown(
+        '<p class="kicker" style="margin-bottom:2px">Shot Diet</p>'
+        '<p class="cap" style="margin:0 0 16px">NBA shot selection vs. shot making'
+        '</p>', unsafe_allow_html=True)
     page = st.radio("Section", PAGES, label_visibility="collapsed")
-    ui.rule(18)
+    ui.rule(16)
     st.markdown(
-        f'<p class="cap">{SUM.get("n_shots", 0):,} shots · {len(SEASONS)} seasons '
-        f'({SEASONS[-1]} to {SEASONS[0]})<br>Every regular-season field goal attempt '
-        f'from stats.nba.com.</p>', unsafe_allow_html=True)
+        f'<p class="cap">{SUM.get("n_shots", 0):,} shots · {SEASONS[-1]} to '
+        f'{SEASONS[0]}<br>Regular season, stats.nba.com.</p>',
+        unsafe_allow_html=True)
 
 
 # ==========================================================================
-# 1. the finding
+# Search: a player page, and nothing at all until one is chosen
 # ==========================================================================
-if page == "The finding":
-    banner.render()
+if page == "Search":
+    ui.kicker("Player search")
+    ui.title("Look up a player")
+    ui.note("Scoring split into the shots a player got and how well he made them. "
+            "Every figure is per 100 shots, against the league average that season.")
 
-    sh = D.table("split_half").set_index("metric")
-    yoy = D.table("yoy").set_index("metric")
-    spread = D.table("spread").set_index("component")
-    stab = SUM.get("stabilization_attempts_50pct", {})
-    k_sel, k_mak = stab.get("selection", 0), stab.get("making", 0)
-
-    ui.kicker("The finding")
-    ui.title("Which half of a shot can you actually coach?")
-    ui.lede(
-        "Every field goal attempt is two decisions layered on top of each other: "
-        "what shot the offence generated, and whether the player put it in. "
-        "Box-score efficiency welds them together, so a centre who only dunks looks "
-        "like a great shooter and a guard creating late-clock jumpers looks like a "
-        "bad one. This project separates the two, then measures how much of each one "
-        "a team can actually move.")
-
-    ui.rule(30)
-
-    ui.section("One half of the game settles in eleven shots. The other takes a season.")
-    ui.para(
-        "Watch a player take eleven attempts and you already know most of what you "
-        "will ever know about the quality of the shots he gets. Watch him take three "
-        "hundred and you still cannot say with confidence whether he is a good "
-        "shooter. That gap is the whole finding, and it decides which half is worth "
-        "a coaching staff's attention.")
-
-    ui.figure(
-        C.stabilization_curve(D.table("stabilization_curve"), stab),
-        "Reliability is measured inside attempt bins, then fitted to r = n / (n + k). "
-        "The dotted lines mark where each measure becomes half signal, half noise.")
-
-    ui.para(
-        "The same thing shows up across seasons. What kind of shots a player takes is "
-        "close to a fixed property of his role and his team's scheme, and it survives "
-        "into the following year almost intact. How well he makes them survives far "
-        "less well: about a third of it does not carry over at all.")
-
-    with ui.reveal("Show the reliability figures"):
-        a, b = st.columns([1, 1], gap="large")
-        with a:
-            ui.figure(C.reliability_bars(D.table("split_half"), D.table("yoy")))
-        with b:
-            r = D.table("split_half").merge(D.table("yoy"), on="metric")
-            r["metric"] = r["metric"].map({"selection": "Shot selection",
-                                           "making": "Shot making"})
-            r = r[["metric", "split_half_r", "spearman_brown_r", "yoy_r",
-                   "n_player_seasons", "n_pairs"]]
-            r.columns = ["", "Split-half r", "Spearman-Brown", "Season to season",
-                         "Player-seasons", "Season pairs"]
-            ui.table(r, {"Split-half r": "{:.3f}", "Spearman-Brown": "{:.3f}",
-                         "Season to season": "{:.3f}", "Player-seasons": "{:,.0f}",
-                         "Season pairs": "{:,.0f}"})
-            ui.caption(
-                "Split-half correlates a player's odd-numbered games against his "
-                "even-numbered ones inside the same season. Season-to-season pairs "
-                "consecutive seasons for the same player.")
-
-    ui.rule(34)
-
-    # ---- why the leaderboard misleads -------------------------------------
-    ps = D.table("player_season")
-    d = ps[(ps["SEASON"] == LATEST) & (ps["fga"] >= 200)]
-    show = [x for x in ("Nikola Jokić", "DeMar DeRozan", "Rudy Gobert", "Luka Dončić",
-                        "Kevin Durant", "Mitchell Robinson")
-            if x in set(d["PLAYER_NAME"])]
-
-    ui.section("Why the efficiency leaderboard misleads you")
-    ui.para(
-        "In any single season the two components look equally important. They vary "
-        "across players by almost exactly the same amount, which is why nobody "
-        "separates them. Strip out the measurement noise, though, and most of the "
-        "difference that actually repeats is simply which shots a player takes.")
-    ui.para(
-        "The two also pull against each other. Players handed the easiest shots tend "
-        "to be the weaker shot-makers, and the best shot-makers are handed the "
-        "hardest shots. Rudy Gobert scores more per shot than Luka Dončić and is the "
-        "worse shooter of the two by a wide margin.")
-
-    ui.figure(
-        C.selection_vs_making(d, show),
-        f"{LATEST}, minimum 200 attempts. Bubble size is volume, colour is total "
-        "points per 100 above league average. Ringed points are labelled; hover for "
-        "any player.")
-
-    with ui.reveal("Show the same players as numbers"):
-        ex = d[d["PLAYER_NAME"].isin(show)].sort_values("selection_p100")
-        ex = ex[["PLAYER_NAME", "team", "fga", "pps", "selection_p100", "making_p100"]]
-        ex.columns = ["Player", "Team", "FGA", "Pts/shot", "Selection /100",
-                      "Making /100"]
-        ui.table(ex, {"FGA": "{:.0f}", "Pts/shot": "{:.3f}",
-                      "Selection /100": "{:+.1f}", "Making /100": "{:+.1f}"})
-        sp = spread.reset_index()
-        sp["component"] = sp["component"].map({"selection": "Shot selection",
-                                               "making": "Shot making"})
-        sp = sp[["component", "observed_sd_p100", "repeatable_sd_p100",
-                 "noise_sd_p100", "share_of_repeatable_spread"]]
-        sp.columns = ["", "Spread across players (SD)", "Of which repeatable",
-                      "Of which noise", "Share of repeatable spread"]
-        ui.table(sp, {"Spread across players (SD)": "{:.2f}",
-                      "Of which repeatable": "{:.2f}", "Of which noise": "{:.2f}",
-                      "Share of repeatable spread": "{:.1%}"})
-        ui.caption(
-            f"Selection and shot making correlate "
-            f"{SUM.get('corr_selection_making', 0):+.2f} across players.")
-
-    ui.rule(34)
-
-    # ---- the verdict ------------------------------------------------------
-    bts = D.table("backtest_summary")
-    eb_lg = bts[bts["comparison"] == "EB vs. league-average advice"].iloc[0]
-    eb_kept = bts[bts["comparison"] == "EB prescription vs. do nothing"].iloc[0]
-
-    ui.section("So what should a staff actually do?")
-    ui.para(
-        "The project ships an optimiser that moves a small share of a player's "
-        "attempts out of the mid-range and into the rim and the corners. Graded "
-        "against the following season it works, and it works for almost everyone. "
-        "Then we ran the controls that could have killed it.")
-    ui.pull(
-        "Tailoring the advice to the individual shooter turned out to be worth "
-        "nothing at all. Every point of the gain comes from the league-average "
-        "structure of the floor.")
-    ui.para(
-        "A prescription built from a player's own shrunk zone-by-zone shooting is "
-        "statistically indistinguishable from generic advice that ignores him "
-        "completely, and the two genuinely disagree for about half the league. "
-        "Trusting his raw hot zones is worse still. One season of shot data simply "
-        "does not contain a trustworthy read on where an individual shoots best.")
-
-    ui.figure(
-        C.backtest_dots(bts),
-        "Each season's prescription is graded against the following season's "
-        "shooting, so every variant is judged on the same future. Bars are 95% "
-        "bootstrap confidence intervals; grey means the interval contains zero.")
-
-    with ui.reveal("Show the out-of-sample results"):
-        b2 = bts.copy()
-        b2.columns = ["Comparison", "Mean pts/100", "CI low", "CI high",
-                      "% of players positive", "n"]
-        ui.table(b2, {"Mean pts/100": "{:+.3f}", "CI low": "{:+.3f}",
-                      "CI high": "{:+.3f}", "% of players positive": "{:.1f}",
-                      "n": "{:,.0f}"})
-
-    ui.rule(30)
-    ui.section("The practical upshot")
-    ui.para(
-        "Shot quality belongs to the scheme far more than to the roster. Spend the "
-        "coaching capital on where shots come from: it shows up almost immediately "
-        "and it persists across seasons. Do not build a personalised shot-diet plan "
-        "off one season of shooting splits, because you will be coaching noise. And "
-        "read every efficiency leaderboard through the split, because a high-scoring "
-        "centre and a low-scoring guard can be the same player wearing different "
-        "roles.")
-
-
-# ==========================================================================
-# 2. players
-# ==========================================================================
-elif page == "Players":
-    ps = D.table("player_season")
-
-    ui.kicker("Players")
-    ui.title("Who gets good shots, and who makes hard ones")
-    ui.lede(
-        "The horizontal axis is what a player's shot diet is worth in average hands. "
-        "The vertical axis is what he added on top of it. Together they sum exactly "
-        "to his efficiency above league average.")
-
-    c = st.columns([1, 1, 2])
+    c = st.columns([1, 3.4])
     season = c[0].selectbox("Season", SEASONS, index=0)
-    min_fga = c[1].slider("Minimum attempts", 100, 1000, 200, step=50)
-    d = ps[(ps["SEASON"] == season) & (ps["fga"] >= min_fga)].copy()
-    names = sorted(d["PLAYER_NAME"].unique())
-    default = [x for x in ("Nikola Jokić", "DeMar DeRozan", "Rudy Gobert")
-               if x in names]
-    picked = c[2].multiselect("Highlight", names, default=default)
+    names = roster(season)
+    with c[1]:
+        who = player_search(names, "search", season)
+    if who is None:
+        st.stop()
 
-    ui.figure(C.selection_vs_making(d, picked, season),
-              f"{season}, minimum {min_fga} attempts.")
+    d = PS[(PS["SEASON"] == season) & (PS["PLAYER_NAME"] == who)]
+    row = d.iloc[0]
 
-    with ui.reveal("Show the leaderboard"):
-        sort_by = st.radio("Rank by", ["Total points added", "Shot selection",
-                                       "Shot making"], horizontal=True)
-        col = {"Total points added": "total_pts", "Shot selection": "selection_p100",
-               "Shot making": "making_p100"}[sort_by]
-        tbl = d.sort_values(col, ascending=False)[
-            ["PLAYER_NAME", "team", "fga", "fg_pct", "pps", "xpps",
-             "selection_p100", "making_p100", "total_pts"]]
-        tbl.columns = ["Player", "Team", "FGA", "FG%", "Pts/shot", "Expected",
-                       "Selection /100", "Making /100", "Total pts added"]
-        ui.table(tbl, {"FG%": "{:.1%}", "Pts/shot": "{:.3f}", "Expected": "{:.3f}",
-                       "Selection /100": "{:+.1f}", "Making /100": "{:+.1f}",
-                       "Total pts added": "{:+.0f}", "FGA": "{:.0f}"}, height=420)
+    ui.rule(18)
+    st.markdown(f'<h1 class="h1">{who}</h1>', unsafe_allow_html=True)
+    ui.caption(f"{row['team']} · {season} · regular season", top=0)
 
-    ui.rule(34)
+    ui.statline([
+        ("Attempts", f"{row['fga']:,.0f}"),
+        ("FG%", f"{row['fg_pct']:.1%}"),
+        ("Pts / shot", f"{row['pps']:.3f}"),
+        ("Expected", f"{row['xpps']:.3f}"),
+        ("Selection /100", signed(row["selection_p100"])),
+        ("Making /100", signed(row["making_p100"])),
+        ("Points added", signed(row["total_pts"], "+.0f")),
+    ])
+    ui.caption(
+        "Selection is what his shot diet is worth in league-average hands. Making "
+        "is what he added on top. The two sum to points added.", top=0)
 
-    # ---- player detail ----------------------------------------------------
-    ui.section("Player detail")
-    who = st.selectbox("Player", names, index=names.index(picked[0]) if picked else 0)
-    row = d[d["PLAYER_NAME"] == who].iloc[0]
-
-    verb_s = "better than" if row["selection_p100"] >= 0 else "worse than"
-    verb_m = "added" if row["making_p100"] >= 0 else "gave back"
-    st.markdown(
-        f'<p class="lede">{who} took {n(row["fga"], ",.0f")} shots in {season} and '
-        f'scored {n(row["pps"], ".2f")} points on each of them. The shots themselves '
-        f'were {n(abs(row["selection_p100"]), ".1f")} points per 100 {verb_s} what '
-        f'the average NBA player gets, and he {verb_m} '
-        f'{n(abs(row["making_p100"]), ".1f")} more on top of that. Net, he was worth '
-        f'{n(row["total_pts"], "+.0f")} points above a league-average shooter on a '
-        f'league-average diet.</p>', unsafe_allow_html=True)
-
-    left, right = st.columns([1.15, 1], gap="large")
+    left, right = st.columns([1, 1.22], gap="large")
     with left:
         if season == LATEST:
             shots = D.table("shots_latest")
-            ui.figure(
-                court.hex_shot_chart(shots[shots["PLAYER_NAME"] == who], shots),
-                "Hexagon area is attempt volume; colour is points per shot against "
-                "what the league scores from that same patch of floor.")
+            ui.figure(court.hex_shot_chart(shots[shots["PLAYER_NAME"] == who], shots),
+                      "Hexagon area is volume; colour is points per shot against the "
+                      "league from that same spot.")
         else:
-            st.info(f"Shot charts ship for {LATEST} only, to keep the repository "
-                    "small. Re-run src/run_pipeline.py to build them for other "
-                    "seasons.")
+            ui.empty(f"Shot charts are built for {LATEST} only, to keep the "
+                     "repository small. Re-run src/run_pipeline.py for others.")
     with right:
-        hist = ps[ps["PLAYER_NAME"] == who].sort_values("SEASON")
-        if len(hist) > 1:
-            ui.figure(C.player_history(hist),
-                      "Season by season. Selection is what the diet was worth; "
-                      "making is what he added to it.")
-
-    with ui.reveal("Show the zone profile"):
         z = D.table("player_zone")
         zz = z[(z["SEASON"] == season) & (z["PLAYER_NAME"] == who)].copy()
         zz["zone"] = pd.Categorical(zz["zone"], ZONE_ORDER, ordered=True)
         out = zz.sort_values("zone")[["zone", "att", "share", "fg_pct", "fg_pct_eb",
                                       "league_fg_pct", "ppa_eb", "league_ppa"]]
-        out.columns = ["Zone", "Att", "Share", "FG%", "FG% shrunk", "League FG%",
-                       "Pts/att shrunk", "League pts/att"]
-        ui.table(out, {"Share": "{:.1%}", "FG%": "{:.1%}", "FG% shrunk": "{:.1%}",
-                       "League FG%": "{:.1%}", "Pts/att shrunk": "{:.2f}",
-                       "League pts/att": "{:.2f}", "Att": "{:.0f}"})
-        ui.caption(
-            "Shrunk blends the player's own rate toward the league rate in "
-            "proportion to how little we have seen. It is the correction that keeps "
-            "a 12-for-20 stretch from being read as a skill.")
+        out.columns = ["Zone", "Att", "Share", "FG%", "FG% adj", "Lg FG%",
+                       "Pts/att adj", "Lg pts/att"]
+        ui.section("By zone")
+        ui.table(out, {"Share": "{:.1%}", "FG%": "{:.1%}", "FG% adj": "{:.1%}",
+                       "Lg FG%": "{:.1%}", "Pts/att adj": "{:.2f}",
+                       "Lg pts/att": "{:.2f}", "Att": "{:.0f}"})
+        ui.caption("Adjusted rates are shrunk toward the league in proportion to "
+                   "sample size, so a hot stretch is not read as a skill.")
+
+        hist = PS[PS["PLAYER_NAME"] == who].sort_values("SEASON")
+        if len(hist) > 1:
+            ui.section("By season")
+            ui.figure(C.player_history(hist))
+
+    with ui.reveal("Where he ranks"):
+        pool = PS[(PS["SEASON"] == season) & (PS["fga"] >= 200)].copy()
+        if row["fga"] >= 200:
+            r = []
+            for lbl, col, asc in (("Shot selection", "selection_p100", False),
+                                  ("Shot making", "making_p100", False),
+                                  ("Points added", "total_pts", False),
+                                  ("Points per shot", "pps", False)):
+                rank = int(pool[col].rank(ascending=asc, method="min")
+                           [pool["PLAYER_NAME"] == who].iloc[0])
+                r.append({"Measure": lbl, "Rank": f"{rank} of {len(pool):,}",
+                          "Value": f"{row[col]:+.2f}" if "p100" in col or
+                          col == "total_pts" else f"{row[col]:.3f}"})
+            ui.table(pd.DataFrame(r))
+            ui.caption(f"Among {len(pool):,} players with 200 or more attempts in "
+                       f"{season}.")
+        else:
+            ui.caption("Ranks are shown for players with 200 or more attempts.")
 
 
 # ==========================================================================
-# 3. optimiser
+# Leaders
+# ==========================================================================
+elif page == "Leaders":
+    ui.kicker("Leaders")
+    ui.title("Sort the league")
+
+    c = st.columns([1, 1.1, 1.6, 1])
+    season = c[0].selectbox("Season", SEASONS, index=0)
+    min_fga = c[1].slider("Min attempts", 100, 1200, 300, step=50)
+    metric = c[2].selectbox("Sort by", ["Points added", "Shot selection",
+                                        "Shot making", "Points per shot",
+                                        "Attempts"])
+    order = c[3].selectbox("Order", ["High to low", "Low to high"])
+
+    col = {"Points added": "total_pts", "Shot selection": "selection_p100",
+           "Shot making": "making_p100", "Points per shot": "pps",
+           "Attempts": "fga"}[metric]
+    d = PS[(PS["SEASON"] == season) & (PS["fga"] >= min_fga)].copy()
+    d = d.sort_values(col, ascending=(order == "Low to high"))
+    d.insert(0, "#", range(1, len(d) + 1))
+
+    tbl = d[["#", "PLAYER_NAME", "team", "fga", "fg_pct", "pps", "xpps",
+             "selection_p100", "making_p100", "total_pts"]]
+    tbl.columns = ["#", "Player", "Tm", "FGA", "FG%", "Pts/shot", "Expected",
+                   "Selection /100", "Making /100", "Points added"]
+    ui.table(tbl, {"FG%": "{:.1%}", "Pts/shot": "{:.3f}", "Expected": "{:.3f}",
+                   "Selection /100": "{:+.1f}", "Making /100": "{:+.1f}",
+                   "Points added": "{:+.0f}", "FGA": "{:.0f}"}, height=560)
+    ui.caption(f"{len(d):,} players, {season}, minimum {min_fga} attempts. "
+               "Click any column header to re-sort.")
+
+    with ui.reveal("Show as a chart"):
+        ui.figure(C.selection_vs_making(d.head(400)),
+                  "Horizontal is what the diet is worth; vertical is what the "
+                  "shooter added.")
+
+
+# ==========================================================================
+# Teams
+# ==========================================================================
+elif page == "Teams":
+    ts = D.table("team_season")
+    ui.kicker("Teams")
+    ui.title("Thirty offences")
+
+    c = st.columns([1, 1.6, 3])
+    season = c[0].selectbox("Season", SEASONS, index=0)
+    d = ts[ts["SEASON"] == season]
+    team = c[1].selectbox("Team", sorted(d["team_abbrev"].unique()), index=None,
+                          placeholder="All teams")
+
+    if team:
+        r = d[d["team_abbrev"] == team].iloc[0]
+        ui.rule(16)
+        st.markdown(f'<h1 class="h1">{team}</h1>', unsafe_allow_html=True)
+        ui.caption(f"{season} · regular season", top=0)
+        ui.statline([
+            ("Attempts", f"{r['fga']:,.0f}"),
+            ("Pts / shot", f"{r['pps']:.3f}"),
+            ("3PA rate", f"{r['fg3a_rate']:.1%}"),
+            ("Selection /100", signed(r["selection_p100"], "+.2f")),
+            ("Making /100", signed(r["making_p100"], "+.2f")),
+            ("Total /100", signed(r["total_p100"], "+.2f")),
+        ])
+        roster_t = PS[(PS["SEASON"] == season) & (PS["team"] == team) &
+                      (PS["fga"] >= 100)].sort_values("total_pts", ascending=False)
+        ui.section("Players")
+        rt = roster_t[["PLAYER_NAME", "fga", "pps", "selection_p100",
+                       "making_p100", "total_pts"]]
+        rt.columns = ["Player", "FGA", "Pts/shot", "Selection /100",
+                      "Making /100", "Points added"]
+        ui.table(rt, {"FGA": "{:.0f}", "Pts/shot": "{:.3f}",
+                      "Selection /100": "{:+.1f}", "Making /100": "{:+.1f}",
+                      "Points added": "{:+.0f}"})
+    else:
+        ui.figure(C.team_scatter(d),
+                  "Right is better shot selection; up is better shot making.")
+        tbl = d.sort_values("total_p100", ascending=False)[
+            ["team_abbrev", "fga", "pps", "fg3a_rate", "selection_p100",
+             "making_p100", "total_p100"]]
+        tbl.columns = ["Tm", "FGA", "Pts/shot", "3PA rate", "Selection /100",
+                       "Making /100", "Total /100"]
+        ui.table(tbl, {"FGA": "{:.0f}", "Pts/shot": "{:.3f}", "3PA rate": "{:.1%}",
+                       "Selection /100": "{:+.2f}", "Making /100": "{:+.2f}",
+                       "Total /100": "{:+.2f}"}, height=420)
+
+    with ui.reveal("League shot diet by zone"):
+        lz = D.table("league_zone")
+        l = lz[lz["SEASON"] == season].copy()
+        l["zone"] = pd.Categorical(l["zone"], ZONE_ORDER, ordered=True)
+        l = l.sort_values("zone")[["zone", "att", "share", "league_fg_pct",
+                                   "league_ppa"]]
+        l.columns = ["Zone", "Attempts", "Share of shots", "FG%", "Pts per attempt"]
+        ui.table(l, {"Attempts": "{:,.0f}", "Share of shots": "{:.1%}",
+                     "FG%": "{:.1%}", "Pts per attempt": "{:.3f}"})
+
+
+# ==========================================================================
+# Optimiser
 # ==========================================================================
 elif page == "Shot-diet optimiser":
-    z, ps, lz = D.table("player_zone"), D.table("player_season"), D.table("league_zone")
+    z, lz = D.table("player_zone"), D.table("league_zone")
 
     ui.kicker("Prescriptive tool")
-    ui.title("The shot-diet optimiser")
-    ui.lede(
-        "A linear program that reallocates a fixed share of a player's attempts "
-        "across the six zones to maximise expected points, held to how much churn a "
-        "staff would realistically install. Zone values are empirical-Bayes "
-        "estimates: the player's own rate blended toward the league's in proportion "
-        "to sample size.")
+    ui.title("Reallocate a shot diet")
+    ui.note("A linear program that moves a capped share of a player's attempts "
+            "between zones to maximise expected points.")
 
-    c = st.columns([1, 1.4, 1, 1])
+    c = st.columns([1, 1, 1, 2.2])
     season = c[0].selectbox("Season", SEASONS, index=0)
-    pool = ps[(ps["SEASON"] == season) & (ps["fga"] >= 200)]
-    names = sorted(pool["PLAYER_NAME"].unique())
-    who = c[1].selectbox("Player", names,
-                         index=names.index("DeMar DeRozan")
-                         if "DeMar DeRozan" in names else 0)
-    move = c[2].slider("Attempts you may move", 1, 25, 5, step=1, format="%d%%") / 100
-    zone_cap = c[3].slider("Max change per zone", 1, 25, 5, step=1, format="%d%%") / 100
+    move = c[1].slider("Attempts movable", 1, 25, 5, step=1, format="%d%%") / 100
+    zone_cap = c[2].slider("Cap per zone", 1, 25, 5, step=1, format="%d%%") / 100
+    names = roster(season, 200)
+    with c[3]:
+        who = player_search(
+            names, "opt", season,
+            hint=f"Search a player to generate a prescription.<br><br>"
+                 f"<span style='font-size:.8rem'>{len(names):,} qualify in "
+                 f"{season} with 200 or more attempts.</span>")
+    if who is None:
+        st.stop()
 
     zz = z[(z["SEASON"] == season) & (z["PLAYER_NAME"] == who)]
     pri = lz[lz["SEASON"] == season]
@@ -335,11 +338,8 @@ elif page == "Shot-diet optimiser":
     eb = (made + k * league_pct) / (att + k)
     values = eb * pt_val
     new_shares = optimise_diet(shares, values, move, zone_cap)
-
     cur_pps, new_pps = float(shares @ values), float(new_shares @ values)
     fga = float(att.sum())
-    gain100 = (new_pps - cur_pps) * 100
-    season_pts = (new_pps - cur_pps) * fga
 
     det = pd.DataFrame({
         "zone": ZONE_ORDER, "att": att, "share": shares, "new_share": new_shares,
@@ -347,189 +347,133 @@ elif page == "Shot-diet optimiser":
         "league_ppa": pri["league_ppa"].to_numpy(float)})
     moves = det[det["delta"].abs() > 1e-6].sort_values("delta", ascending=False)
 
-    if moves.empty:
-        ui.para(f"{who}'s diet is already optimal under these constraints.")
-    else:
-        into = moves.iloc[0]["zone"]
-        outof = moves.iloc[-1]["zone"]
-        shifted = float(moves["delta"].clip(lower=0).sum() * fga)
-        st.markdown(
-            f'<p class="lede">Move {n(shifted, ",.0f")} of {who}\'s '
-            f'{n(fga, ",.0f")} attempts out of the '
-            f'<b>{outof.lower()}</b> and into the <b>{into.lower()}</b>, and he '
-            f'scores {n(gain100, "+.2f")} more points per 100 shots. Across the '
-            f'season that is about {n(abs(season_pts), ",.0f")} points, for a change '
-            f'of roughly {n(move * 100, ".0f")}% of his shot diet.</p>',
-            unsafe_allow_html=True)
+    ui.rule(16)
+    st.markdown(f'<h1 class="h1">{who}</h1>', unsafe_allow_html=True)
+    ui.caption(f"{season} · {fga:,.0f} attempts", top=0)
+    ui.statline([
+        ("Expected now", f"{cur_pps:.3f}"),
+        ("Optimised", f"{new_pps:.3f}"),
+        ("Gain /100", signed((new_pps - cur_pps) * 100, "+.2f")),
+        ("Season points", signed((new_pps - cur_pps) * fga, "+.0f")),
+        ("Shots moved", f"{moves['delta'].clip(lower=0).sum() * fga:,.0f}"),
+    ])
 
-    ui.figure(C.zone_prescription(det, ZONE_ORDER),
-              "Current diet against the prescribed one, ordered by distance from "
-              "the rim.")
-
-    ui.caption(
-        "Read this with the caveat from the finding. Out of sample, this "
-        "personalised prescription is no better than the same move computed from "
-        "league-average zone values alone. The move earns its points; tailoring it "
-        "to him does not.", top=18)
-
-    with ui.reveal("Show the zone maths"):
-        t = det.copy()
-        t["delta_pct"] = t["delta"] * 100
-        t = t[["zone", "att", "share", "new_share", "delta_pct", "ppa_eb",
-               "league_ppa"]]
-        t.columns = ["Zone", "Attempts", "Current share", "Prescribed share",
-                     "Change", "His pts/att", "League pts/att"]
-        ui.table(t, {"Attempts": "{:.0f}", "Current share": "{:.1%}",
-                     "Prescribed share": "{:.1%}", "Change": "{:+.1f}%",
-                     "His pts/att": "{:.3f}", "League pts/att": "{:.3f}"})
-
-    with ui.reveal("Show the biggest available gains this season"):
-        summ = D.table("prescription_summary")
-        s = summ[summ["SEASON"] == season].nlargest(20, "gain_pts_season")[
-            ["PLAYER_NAME", "fga", "current_pps_model", "optimised_pps",
-             "gain_p100", "gain_pts_season", "volume_moved_pct"]]
-        s.columns = ["Player", "FGA", "Expected pts/shot", "Optimised", "Gain /100",
-                     "Season points", "Volume moved"]
-        ui.table(s, {"FGA": "{:.0f}", "Expected pts/shot": "{:.3f}",
-                     "Optimised": "{:.3f}", "Gain /100": "{:+.2f}",
-                     "Season points": "{:+.0f}", "Volume moved": "{:.1f}%"},
-                 height=400)
-        ui.caption("Computed at the default 5% move budget.")
-
-
-# ==========================================================================
-# 4. teams
-# ==========================================================================
-elif page == "Teams":
-    ts = D.table("team_season")
-
-    ui.kicker("Teams")
-    ui.title("The same split across thirty offences")
-    ui.lede(
-        "Teams to the right generate better shots. Teams higher up convert them "
-        "above expectation. Selection is the half a coaching staff owns.")
-
-    season = st.selectbox("Season", SEASONS, index=0)
-    d = ts[ts["SEASON"] == season]
-
-    ui.figure(C.team_scatter(d),
-              f"{season}. Colour is total points per 100 above league average.")
-
-    with ui.reveal("Show the team table"):
-        tbl = d.sort_values("total_p100", ascending=False)[
-            ["team_abbrev", "fga", "pps", "fg3a_rate", "selection_p100",
-             "making_p100", "total_p100"]]
-        tbl.columns = ["Team", "FGA", "Pts/shot", "3PA rate", "Selection /100",
-                       "Making /100", "Total /100"]
-        ui.table(tbl, {"FGA": "{:.0f}", "Pts/shot": "{:.3f}", "3PA rate": "{:.1%}",
-                       "Selection /100": "{:+.2f}", "Making /100": "{:+.2f}",
-                       "Total /100": "{:+.2f}"}, height=420)
-
-    with ui.reveal("Show the league shot diet"):
-        lz = D.table("league_zone")
-        l = lz[lz["SEASON"] == season].copy()
-        l["zone"] = pd.Categorical(l["zone"], ZONE_ORDER, ordered=True)
-        l = l.sort_values("zone")[["zone", "att", "share", "league_fg_pct",
-                                   "league_ppa"]]
-        l.columns = ["Zone", "Attempts", "Share of league shots", "FG%",
-                     "Points per attempt"]
-        ui.table(l, {"Attempts": "{:,.0f}", "Share of league shots": "{:.1%}",
-                     "FG%": "{:.1%}", "Points per attempt": "{:.3f}"})
-
-
-# ==========================================================================
-# 5. method
-# ==========================================================================
-else:
-    ui.kicker("Method")
-    ui.title("How the split is built, and where it breaks")
-
-    ui.section("The decomposition")
-    ui.para(
-        "For every attempt, a model estimates the probability a league-average "
-        "shooter converts it. Times the shot's point value, that gives expected "
-        "points per shot. Averaged over a player's season it splits exactly in two:")
-    st.code("PPS − league PPS  =  (xPPS − league PPS)  +  (PPS − xPPS)\n"
-            "                          shot selection        shot making",
-            language=None)
-    ui.para(
-        "The first term is what the diet is worth in average hands. The second is "
-        "what the shooter added on top. They sum to the player's efficiency above "
-        "league average with nothing left over.")
-
-    ui.rule(30)
-    ui.section("The model")
-    ui.para(
-        "Gradient-boosted trees over shot geometry, clock state, venue, season and "
-        "the play type recorded in ACTION_TYPE. Two versions are fit: one on "
-        "geometry alone, and one that adds play type. The second drives the headline "
-        "split, on the reasoning that whether a shot is a cut, a pull-up or a "
-        "turnaround fadeaway is a property of the offence rather than of the "
-        "shooter's touch.")
-    ui.para(
-        "Calibration matters more than discrimination here, because an uncalibrated "
-        "model would not make the decomposition add up. Across every shot in the "
-        "sample the model's expected points sit within four thousandths of a point "
-        "per 100 of actual scoring.")
-
-    ui.figure(C.calibration_plot(D.table("calibration")),
-              "Predicted against observed make rate, in twenty equal-count bins.")
-
-    with ui.reveal("Show the model metrics"):
-        m = D.table("model_metrics").copy()
-        m.columns = ["Model", "Log loss", "Brier", "AUC",
-                     "Log-loss gain vs base rate (%)"]
-        ui.table(m, {"Log loss": "{:.4f}", "Brier": "{:.4f}", "AUC": "{:.3f}",
-                     "Log-loss gain vs base rate (%)": "{:.2f}"})
-        cal = SUM.get("calibration", {})
+    left, right = st.columns([1.15, 1], gap="large")
+    with left:
+        ui.figure(C.zone_prescription(det, ZONE_ORDER))
+    with right:
+        ui.section("Prescription")
+        if moves.empty:
+            ui.note("Already optimal under these constraints.")
+        else:
+            m = moves[["zone", "delta", "ppa_eb", "league_ppa"]].copy()
+            m["shots"] = m["delta"] * fga
+            m["delta"] = m["delta"] * 100
+            m.columns = ["Zone", "Change", "His pts/att", "Lg pts/att", "Shots"]
+            ui.table(m[["Zone", "Change", "Shots", "His pts/att", "Lg pts/att"]],
+                     {"Change": "{:+.1f}%", "Shots": "{:+,.0f}",
+                      "His pts/att": "{:.3f}", "Lg pts/att": "{:.3f}"})
         ui.caption(
-            f"Calibration gap {cal.get('calibration_gap_p100', 0):+.3f} points per "
-            f"100 shots; the worst of twenty probability bins is off by "
-            f"{cal.get('max_calibration_bin_error', 0):.3f}.")
+            "Out of sample this personalised prescription is no better than the "
+            "same move computed from league-average zone values alone. See "
+            "Findings.")
 
-    ui.rule(30)
-    ui.section("Guards against fooling ourselves")
-    st.markdown(f"""
-<div class="para">
+    with ui.reveal("Full zone table"):
+        t = det.copy()
+        t["delta"] = t["delta"] * 100
+        t = t[["zone", "att", "share", "new_share", "delta", "ppa_eb", "league_ppa"]]
+        t.columns = ["Zone", "Attempts", "Current", "Prescribed", "Change",
+                     "His pts/att", "Lg pts/att"]
+        ui.table(t, {"Attempts": "{:.0f}", "Current": "{:.1%}",
+                     "Prescribed": "{:.1%}", "Change": "{:+.1f}%",
+                     "His pts/att": "{:.3f}", "Lg pts/att": "{:.3f}"})
 
-**No player grades himself.** Every prediction used to evaluate a player is
-out-of-fold, and the folds are grouped by player ID, so the model scoring a player
-has never seen one of his shots. Without this a high-volume specialist partly sets
-his own benchmark.
+    with ui.reveal("Biggest available gains this season"):
+        summ = D.table("prescription_summary")
+        s = summ[summ["SEASON"] == season].nlargest(25, "gain_pts_season")[
+            ["PLAYER_NAME", "fga", "current_pps_model", "optimised_pps",
+             "gain_p100", "gain_pts_season"]]
+        s.columns = ["Player", "FGA", "Expected", "Optimised", "Gain /100",
+                     "Season points"]
+        ui.table(s, {"FGA": "{:.0f}", "Expected": "{:.3f}", "Optimised": "{:.3f}",
+                     "Gain /100": "{:+.2f}", "Season points": "{:+.0f}"}, height=400)
+        ui.caption("At the default 5% move budget.")
 
-**The API silently truncates.** The shot endpoint caps every response at 102,400
-rows, so a whole-season request returns roughly the first half of the season with no
-error and no warning. The loader pages by calendar month and asserts that no chunk
-reaches the cap.
 
-**Clock management is removed.** {SUM.get('n_excluded_backcourt_or_heave', 0):,}
-backcourt attempts and buzzer heaves are dropped, since they are not shot selection.
+# ==========================================================================
+# Findings
+# ==========================================================================
+elif page == "Findings":
+    stab = SUM.get("stabilization_attempts_50pct", {})
+    sh, yoy = D.table("split_half"), D.table("yoy")
+    spread = D.table("spread")
+    bts = D.table("backtest_summary")
 
-**Zones are kept coarse on purpose.** An earlier ten-zone scheme split left from
-right, and the empirical-Bayes prior strength swung by an order of magnitude between
-the two wings for the same shot. That is binomial noise rather than a real talent
-difference, and it made the optimiser prefer left-side threes to identical
-right-side ones.
+    ui.kicker("Findings")
+    ui.title("What the data says")
+    ui.note("Three results, each with the evidence behind it.")
 
-**Rates are shrunk, not trusted.** A method-of-moments beta-binomial prior means
-only the spread that exceeds binomial noise is treated as talent.
+    ui.rule(18)
+    ui.section("1. Shot selection is knowable almost at once. Shot making is not.")
+    ui.statline([
+        ("Selection · 50% reliable at", f"{stab.get('selection', 0):.0f} shots"),
+        ("Making · 50% reliable at", f"{stab.get('making', 0):.0f} shots"),
+        ("Selection · year to year", f"r = {yoy.set_index('metric').loc['selection', 'yoy_r']:.2f}"),
+        ("Making · year to year", f"r = {yoy.set_index('metric').loc['making', 'yoy_r']:.2f}"),
+    ])
+    ui.figure(C.stabilization_curve(D.table("stabilization_curve"), stab),
+              "Reliability measured inside attempt bins, fitted to r = n / (n + k).")
 
-**The prescriptive tool is graded out of sample**, against two controls, with
-bootstrap confidence intervals. That is how the null above surfaced instead of a
-personalisation feature that does nothing.
+    with ui.reveal("Reliability detail"):
+        r = sh.merge(yoy, on="metric")
+        r["metric"] = r["metric"].map({"selection": "Shot selection",
+                                       "making": "Shot making"})
+        r = r[["metric", "split_half_r", "spearman_brown_r", "yoy_r",
+               "n_player_seasons", "n_pairs"]]
+        r.columns = ["", "Split-half r", "Spearman-Brown", "Season to season",
+                     "Player-seasons", "Season pairs"]
+        ui.table(r, {"Split-half r": "{:.3f}", "Spearman-Brown": "{:.3f}",
+                     "Season to season": "{:.3f}", "Player-seasons": "{:,.0f}",
+                     "Season pairs": "{:,.0f}"})
+        ui.figure(C.reliability_bars(sh, yoy))
 
-</div>
-""", unsafe_allow_html=True)
+    ui.rule(26)
+    ui.section("2. Most of the repeatable difference between players is which "
+               "shots they take.")
+    sp = spread.copy()
+    sp["component"] = sp["component"].map({"selection": "Shot selection",
+                                           "making": "Shot making"})
+    sp = sp[["component", "observed_sd_p100", "repeatable_sd_p100",
+             "noise_sd_p100", "share_of_repeatable_spread"]]
+    sp.columns = ["", "Spread across players (SD)", "Repeatable", "Noise",
+                  "Share of repeatable spread"]
+    ui.table(sp, {"Spread across players (SD)": "{:.2f}", "Repeatable": "{:.2f}",
+                  "Noise": "{:.2f}", "Share of repeatable spread": "{:.1%}"})
+    ui.caption(
+        f"The two components correlate {SUM.get('corr_selection_making', 0):+.2f} "
+        "across players: easier diets tend to go to the weaker shot-makers.")
 
-    with ui.reveal("Show the robustness checks"):
+    ui.rule(26)
+    ui.section("3. Personalising shot-diet advice is worth nothing.")
+    ui.note("Each season's prescription is graded against the following season, so "
+            "every variant is judged on the same future.")
+    ui.figure(C.backtest_dots(bts),
+              "95% bootstrap confidence intervals. Grey means the interval "
+              "contains zero.")
+    b2 = bts.copy()
+    b2.columns = ["Comparison", "Mean pts/100", "CI low", "CI high",
+                  "% of players positive", "n"]
+    ui.table(b2, {"Mean pts/100": "{:+.3f}", "CI low": "{:+.3f}",
+                  "CI high": "{:+.3f}", "% of players positive": "{:.1f}",
+                  "n": "{:,.0f}"})
+    ui.caption(
+        "Generic league-average advice matches the personalised version exactly. "
+        "Shrinking a player's rates still beats trusting them, and the gap widens "
+        "as the optimiser is allowed to move more volume.")
+
+    with ui.reveal("Robustness of the null"):
         try:
-            sens = D.table("sensitivity_backtest")
-            gaps = D.table("sensitivity_gaps")
-            ui.para(
-                "The headline null would be an artefact if the move budget were so "
-                "small that every variant made the same move. It is not: the null "
-                "holds from a 3% to a 20% budget, while the two prescriptions "
-                "genuinely disagree for about half the league.")
+            sens, gaps = D.table("sensitivity_backtest"), D.table("sensitivity_gaps")
             kk = sens[sens["comparison"].isin(["EB vs. league-average advice",
                                                "EB vs. unshrunk"])]
             kk = kk[["move_budget", "comparison", "mean_p100", "ci_low", "ci_high"]]
@@ -544,39 +488,90 @@ personalisation feature that does nothing.
                           "Median gap between prescriptions": "{:.2f}%",
                           "% identical": "{:.1f}%",
                           "90th percentile gap": "{:.1f}%"})
+            ui.caption("The null holds from a 3% to a 20% budget, and the two "
+                       "prescriptions genuinely differ for about half the league.")
         except Exception:
             ui.caption("Run `python src/sensitivity.py` to generate these.")
 
-    ui.rule(30)
-    ui.section("What this cannot see")
-    st.markdown("""
-<div class="para">
 
-**No defender.** The public feed carries no defender distance or closeout data, so
-selection here means shot location, play type and clock, but not whether the shot was
-open. Some of what lands in shot making is really a player's ability to generate
-separation, which is itself a skill the model cannot attribute.
+# ==========================================================================
+# Method
+# ==========================================================================
+else:
+    ui.kicker("Method")
+    ui.title("How the split is built")
 
-**Play type is a coarse proxy.** ACTION_TYPE is recorded by human scorers and its
-categories blur.
+    st.code("PPS − league PPS  =  (xPPS − league PPS)  +  (PPS − xPPS)\n"
+            "                          shot selection        shot making",
+            language=None)
+    ui.note("A gradient-boosted model estimates what a league-average shooter would "
+            "score on each attempt, from shot geometry, clock state, venue, season "
+            "and play type. The two terms sum to a player's efficiency above league "
+            "average with nothing left over.")
 
-**No free throws, no fouls.** A shot diet that draws more fouls is undervalued here,
-and three-point-heavy diets are mildly flattered for the same reason.
+    ui.rule(20)
+    ui.section("Model")
+    m = D.table("model_metrics").copy()
+    m.columns = ["Model", "Log loss", "Brier", "AUC", "Gain vs base rate (%)"]
+    ui.table(m, {"Log loss": "{:.4f}", "Brier": "{:.4f}", "AUC": "{:.3f}",
+                 "Gain vs base rate (%)": "{:.2f}"})
 
-**The optimiser assumes zone rates hold under reallocation.** Shifting volume changes
-defensive attention, and the marginal corner three is not the average one. The small
-default move budget is there to keep that assumption honest.
+    a, b = st.columns([1, 1], gap="large")
+    with a:
+        ui.figure(C.calibration_plot(D.table("calibration")),
+                  "Predicted against observed make rate, twenty equal-count bins.")
+    with b:
+        cal = SUM.get("calibration", {})
+        ui.section("Guards")
+        st.markdown(f"""
+<div class="note">
 
-**Selection is not free.** Telling a guard to take fewer pull-ups only works if
-someone else can generate the shot. The number says what it is worth, not whether the
-roster can do it.
+**Out-of-fold, grouped by player.** The model scoring a player has never seen one
+of his shots, so a high-volume specialist cannot set his own benchmark.
+
+**The API truncates silently.** `shotchartdetail` caps responses at 102,400 rows,
+returning about half a season with no error. The loader pages by month and asserts
+no chunk reaches the cap.
+
+**Clock management removed.** {SUM.get('n_excluded_backcourt_or_heave', 0):,}
+backcourt attempts and buzzer heaves dropped.
+
+**Six zones, not ten.** A left/right split made the empirical-Bayes prior swing by
+an order of magnitude between wings for the same shot — binomial noise, not talent.
+
+**Rates shrunk, not trusted.** Method-of-moments beta-binomial prior.
+
+**Calibration gap {cal.get('calibration_gap_p100', 0):+.3f}** points per 100 shots
+across every attempt in the sample.
 
 </div>
 """, unsafe_allow_html=True)
 
-    ui.rule(30)
+    ui.rule(20)
+    ui.section("Limits")
+    st.markdown("""
+<div class="note">
+
+**No defender.** The public feed has no defender distance, so selection means
+location, play type and clock — not whether the shot was open. Some of what lands in
+shot making is really the ability to create separation.
+
+**Play type is a coarse, human-scored proxy.**
+
+**No free throws or fouls**, so foul-drawing diets are undervalued.
+
+**The optimiser assumes zone rates hold under reallocation.** The marginal corner
+three is not the average one, which is why the default move budget is small.
+
+**Selection is not free.** Fewer pull-ups only works if someone else can create the
+shot.
+
+</div>
+""", unsafe_allow_html=True)
+
+    ui.rule(20)
     ui.caption(
-        f"{SUM.get('n_shots', 0):,} regular-season field goal attempts across "
+        f"{SUM.get('n_shots', 0):,} regular-season field goal attempts, "
         f"{', '.join(SUM.get('seasons', []))}, from the public stats.nba.com "
         f"shotchartdetail endpoint. Pipeline runtime "
         f"{SUM.get('runtime_minutes', 0)} minutes.")

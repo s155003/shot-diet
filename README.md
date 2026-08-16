@@ -28,15 +28,9 @@ Shot Diet pulls **1,087,633 regular-season field goal attempts** across five sea
 measures how *knowable* each one is, and then tests whether the resulting advice
 survives contact with the following season.
 
-![Shot Diet dashboard. An animated banner shows a silhouette driving from the
-three-point line and dunking over a defender, captioned with the restricted area's
-28.4 percent share and 1.34 points per attempt. Below it, stat tiles report that shot
-selection becomes 50 percent reliable after 11 attempts while shot making needs
-311](docs/finding.png)
+![The Shot Diet player page for Nikola Jokic, showing a summary strip of attempts, points per shot, shot selection and shot making, a hexagonal shot chart and a zone-by-zone shooting table](docs/player.png)
 
-<sub>The banner figures are original silhouettes drawn in SVG, not NBA footage or any
-real player's likeness. The hoop is the same geometry the shot charts use and the
-caption numbers come out of `data/processed/`.</sub>
+<sub>Nothing loads until you search for it. Type a name, get the page.</sub>
 
 ---
 
@@ -64,8 +58,7 @@ why raw efficiency flatters the first group and buries the second.
 > Nikola Jokić takes a *below-average* diet (−6.9) and is the league's second-best
 > maker of it (+21.3).
 
-![Player detail page for Nikola Jokic with a hexagonal shot chart, zone-by-zone
-shooting profile and five seasons of selection and making splits](docs/player-detail.png)
+![The Leaders table, sortable by points added, shot selection, shot making, points per shot or attempts, with a season and minimum-attempts filter](docs/leaders.png)
 
 ### The part that surprised us
 
@@ -93,8 +86,7 @@ them, and the advantage grows the more volume you let the optimiser move.
 It is the same story the reliability table tells. Shot making needs 311 attempts to be
 half signal; a single zone within a single season never gets close.
 
-![Shot-diet optimiser recommending DeMar DeRozan move 50 attempts from the long
-mid-range to the restricted area for 26 extra points over a season](docs/optimiser.png)
+![The Findings page, showing the reliability curve for shot selection against shot making and the out-of-sample backtest with bootstrap confidence intervals](docs/findings.png)
 
 ### What a staff should do with this
 
@@ -114,11 +106,16 @@ mid-range to the restricted area for 26 extra points over a season](docs/optimis
 
 | Page | What it does |
 |---|---|
-| **The finding** | The reliability result, the stabilisation curves, the quadrant chart, and the out-of-sample verdict |
-| **Players** | Leaderboard and quadrant scatter, plus per-player hex shot charts, zone profiles and season histories |
-| **Shot-diet optimiser** | Live LP: pick a player, set the move budget, get a coachable prescription |
-| **Teams** | The same split across all thirty offences |
-| **Method & validation** | Model metrics, calibration, the anti-fooling-ourselves guards, and an honest list of what the data cannot see |
+| **Search** | Type a player's name, get his page: summary strip, hex shot chart, zone table, season history and league ranks. Accent-folded, so `jokic` finds Jokić |
+| **Leaders** | The whole league in one sortable table, filtered by season and minimum attempts |
+| **Teams** | All thirty offences, then any single team's roster |
+| **Shot-diet optimiser** | Search a player, set the move budget, get a prescription |
+| **Findings** | The three results, each with the evidence behind it |
+| **Method** | Model metrics, calibration, the guards and the limits |
+
+![The empty search state before anything has been looked up](docs/search-empty.png)
+
+<sub>The search page before anything has been looked up. No player is preloaded.</sub>
 
 ---
 
@@ -150,9 +147,6 @@ turnaround fadeaway is a property of the offence rather than the shooter's touch
 Calibration matters more than discrimination here, because an uncalibrated model would
 not make the decomposition add up. Across all 1.09M shots, model expected points sit
 **0.004 points per 100** from actual scoring.
-
-![Validation page showing a calibration curve sitting on the diagonal and the
-out-of-sample backtest with bootstrap confidence intervals](docs/validation.png)
 
 ### Guards against fooling ourselves
 

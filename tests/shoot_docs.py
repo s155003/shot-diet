@@ -9,35 +9,48 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs"
 URL = "http://localhost:8511"
 
-# (sidebar label, output name, extra scroll in px)
-SHOTS = [
-    ("The finding", "finding", 0),
-    ("Shot-diet optimiser", "optimiser", 0),
-    ("Players", "player-detail", 1750),
-    ("Method & validation", "validation", 1250),
-]
-
 
 def main() -> None:
     OUT.mkdir(exist_ok=True)
     with sync_playwright() as pw:
         b = pw.chromium.launch()
-        pg = b.new_page(viewport={"width": 1500, "height": 950},
+        pg = b.new_page(viewport={"width": 1500, "height": 980},
                         device_scale_factor=1)
         pg.goto(URL, wait_until="networkidle", timeout=90_000)
         pg.wait_for_selector("h1", timeout=90_000)
-        pg.wait_for_timeout(4000)
+        pg.wait_for_timeout(3500)
 
-        for i, (label, name, scroll) in enumerate(SHOTS):
-            if i:
-                pg.get_by_test_id("stSidebar").get_by_text(label, exact=True).click()
-                pg.wait_for_timeout(5500)
+        def nav(label: str) -> None:
+            pg.get_by_test_id("stSidebar").get_by_text(label, exact=True).click()
+            pg.wait_for_timeout(4500)
+
+        def shot(name: str, scroll: int = 0) -> None:
             if scroll:
                 pg.mouse.wheel(0, scroll)
-                pg.wait_for_timeout(2500)
-            path = OUT / f"{name}.png"
-            pg.screenshot(path=str(path))
-            print(f"{path.name}: {path.stat().st_size / 1024:,.0f} KB")
+                pg.wait_for_timeout(1800)
+            p = OUT / f"{name}.png"
+            pg.screenshot(path=str(p))
+            print(f"{p.name}: {p.stat().st_size / 1024:,.0f} KB")
+
+        # empty search state: the tool before anyone has asked it anything
+        shot("search-empty")
+
+        # type-to-search, then take the accent-folded hit
+        pg.get_by_test_id("stMain").get_by_test_id("stTextInput").locator(
+            "input").fill("jokic")
+        pg.keyboard.press("Enter")
+        pg.wait_for_timeout(5000)
+        shot("player")
+
+        nav("Leaders")
+        shot("leaders")
+
+        nav("Findings")
+        shot("findings")
+
+        nav("Shot-diet optimiser")
+        shot("optimiser-empty")
+
         b.close()
 
 
