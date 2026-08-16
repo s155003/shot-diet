@@ -421,24 +421,27 @@ elif page == "Teams":
     season = st.selectbox("Season", SEASONS, index=0)
     d = ts[ts["SEASON"] == season]
 
-    left, right = st.columns([1.2, 1], gap="large")
-    with left:
-        st.plotly_chart(C.team_scatter(d), use_container_width=True)
-    with right:
-        tbl = d.sort_values("total_p100", ascending=False)[
-            ["team_abbrev", "fga", "pps", "fg3a_rate", "selection_p100",
-             "making_p100", "total_p100"]].copy()
-        tbl.columns = ["Team", "FGA", "Pts/shot", "3PA rate", "Selection /100",
-                       "Making /100", "Total /100"]
-        st.dataframe(
-            tbl.style.format({"FGA": "{:.0f}", "Pts/shot": "{:.3f}",
-                              "3PA rate": "{:.1%}", "Selection /100": "{:+.2f}",
-                              "Making /100": "{:+.2f}", "Total /100": "{:+.2f}"})
-               .background_gradient(subset=["Selection /100"], cmap="RdBu",
-                                    vmin=-7, vmax=7)
-               .background_gradient(subset=["Making /100"], cmap="RdBu",
-                                    vmin=-7, vmax=7),
-            use_container_width=True, hide_index=True, height=560)
+    # Full width for both: thirty labelled teams need horizontal room, and the
+    # table has seven columns that get truncated in a half-width container.
+    st.plotly_chart(C.team_scatter(d), use_container_width=True)
+    st.markdown('<p class="note">Teams to the right generate better shots; teams '
+                'higher up convert them above expectation. Colour is total points '
+                'per 100 above league average.</p>', unsafe_allow_html=True)
+
+    tbl = d.sort_values("total_p100", ascending=False)[
+        ["team_abbrev", "fga", "pps", "fg3a_rate", "selection_p100",
+         "making_p100", "total_p100"]].copy()
+    tbl.columns = ["Team", "FGA", "Pts/shot", "3PA rate", "Selection /100",
+                   "Making /100", "Total /100"]
+    st.dataframe(
+        tbl.style.format({"FGA": "{:.0f}", "Pts/shot": "{:.3f}",
+                          "3PA rate": "{:.1%}", "Selection /100": "{:+.2f}",
+                          "Making /100": "{:+.2f}", "Total /100": "{:+.2f}"})
+           .background_gradient(subset=["Selection /100"], cmap="RdBu",
+                                vmin=-7, vmax=7)
+           .background_gradient(subset=["Making /100"], cmap="RdBu",
+                                vmin=-7, vmax=7),
+        use_container_width=True, hide_index=True, height=420)
 
     st.subheader("League shot diet")
     lz = D.table("league_zone")

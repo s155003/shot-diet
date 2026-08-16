@@ -207,8 +207,8 @@ def team_scatter(ts: pd.DataFrame) -> go.Figure:
     fig.add_trace(go.Scatter(
         x=ts["selection_p100"], y=ts["making_p100"], mode="markers+text",
         text=ts["team_abbrev"], textposition="middle center",
-        textfont=dict(color=T.SURFACE, size=9),
-        marker=dict(size=30, color=ts["total_p100"], colorscale=T.DIVERGING,
+        textfont=dict(color=T.SURFACE, size=9, family=T.FONT),
+        marker=dict(size=26, color=ts["total_p100"], colorscale=T.DIVERGING,
                     cmin=-7, cmax=7, line=dict(width=2, color=T.SURFACE),
                     colorbar=dict(title=dict(text="Total pts<br>per 100",
                                              font=dict(size=11, color=T.INK_2)),
@@ -219,6 +219,12 @@ def team_scatter(ts: pd.DataFrame) -> go.Figure:
                        "%{customdata[1]:.0f}%% of shots are threes<br>"
                        "selection %{x:+.2f} · making %{y:+.2f}<extra></extra>"),
         showlegend=False))
-    return T.style(fig, height=520, showlegend=False,
+    # Pad both axes so bubbles at the extremes are not clipped by the frame.
+    for col, upd in (("selection_p100", fig.update_xaxes),
+                     ("making_p100", fig.update_yaxes)):
+        lo, hi = float(ts[col].min()), float(ts[col].max())
+        pad = (hi - lo) * 0.12
+        upd(range=[lo - pad, hi + pad])
+    return T.style(fig, height=560, showlegend=False,
                    xtitle="Shot selection — points per 100 from the diet",
                    ytitle="Shot making — points per 100 above expectation")

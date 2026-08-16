@@ -174,6 +174,11 @@ The processed tables are committed, so **the dashboard runs immediately after
 `pip install`** — the two data steps are only needed to reproduce or extend the
 analysis.
 
+**Hosting a live link.** Because the processed tables ship in the repo, this deploys
+to [Streamlit Community Cloud](https://share.streamlit.io) with no build step: point
+it at this repo with `app/streamlit_app.py` as the entry point. Nothing is fetched at
+runtime, so the app never depends on stats.nba.com being reachable.
+
 Optional robustness checks (reuses the pipeline's cached predictions):
 
 ```bash
