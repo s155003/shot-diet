@@ -161,6 +161,14 @@ model so reallocation accounts for the defence adjusting.
 
 ---
 
-**Repo:** https://github.com/<your-username>/shot-diet
-**Run it:** `pip install -r requirements.txt && streamlit run app/streamlit_app.py`
-(processed tables are committed, so the dashboard runs without re-fetching)
+**Repo:** https://github.com/s155003/shot-diet
+
+**Run it** (Python 3.10+, two commands, nothing downloaded at startup):
+
+```bash
+pip install -r requirements.txt
+streamlit run app/streamlit_app.py
+```
+
+Every processed table is committed, so the dashboard runs without re-fetching and
+never contacts stats.nba.com at runtime.
