@@ -162,29 +162,56 @@ make the decomposition add up. Across all 1.09M shots, model expected points sit
 
 ## Running it
 
+Requires **Python 3.10 or newer**. Two commands:
+
 ```bash
 pip install -r requirements.txt
-
-python src/fetch.py          # ~4 min, pulls 1.09M shots from stats.nba.com
-python src/run_pipeline.py   # ~2.5 min, fits the models and builds every table
 streamlit run app/streamlit_app.py
 ```
 
-The processed tables are committed, so **the dashboard runs immediately after
-`pip install`** — the two data steps are only needed to reproduce or extend the
-analysis.
+That's it — the dashboard opens at `http://localhost:8501`. Every processed table is
+committed, so **nothing is downloaded and no model is fitted at startup.** The app
+never contacts stats.nba.com at runtime.
 
-**Hosting a live link.** Because the processed tables ship in the repo, this deploys
-to [Streamlit Community Cloud](https://share.streamlit.io) with no build step: point
-it at this repo with `app/streamlit_app.py` as the entry point. Nothing is fetched at
-runtime, so the app never depends on stats.nba.com being reachable.
+<details>
+<summary>Windows, step by step</summary>
 
-Optional robustness checks (reuses the pipeline's cached predictions):
+```powershell
+git clone https://github.com/s155003/shot-diet.git
+cd shot-diet
+python -m pip install -r requirements.txt
+python -m streamlit run app/streamlit_app.py
+```
+</details>
+
+### Reproducing the analysis from scratch
+
+Only needed to rebuild the data or extend it — not to run the dashboard.
 
 ```bash
-python src/sensitivity.py    # is the null just a tight constraint? (no)
-python -m pytest tests/      # renders every dashboard page headlessly
+python src/fetch.py          # ~4 min, pulls 1.09M shots from stats.nba.com
+python src/run_pipeline.py   # ~2.5 min, fits the models and rebuilds every table
 ```
+
+`fetch.py` writes to `data/raw/` (gitignored, ~30 MB) and skips seasons it already
+has. `run_pipeline.py` overwrites `data/processed/` and `reports/summary.json`.
+
+### Verifying it
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest tests/          # renders all five dashboard pages headlessly
+python src/sensitivity.py        # robustness checks on the headline null
+```
+
+`tests/shoot.py` also screenshots each page, which needs
+`python -m playwright install chromium` first.
+
+### Hosting a live link
+
+Because the processed tables ship in the repo, this deploys to
+[Streamlit Community Cloud](https://share.streamlit.io) with no build step: point it
+at this repo with `app/streamlit_app.py` as the entry point and Python 3.10+.
 
 ### Layout
 

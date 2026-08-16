@@ -1,0 +1,5 @@
+# Development / verification extras. Not needed to run the dashboard.
+-r requirements.txt
+
+pytest>=8.0
+playwright>=1.44   # screenshots only; run `playwright install chromium` after
