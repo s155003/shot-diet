@@ -7,6 +7,7 @@ dense rows instead of in hero tiles.
 """
 from __future__ import annotations
 
+import html
 from contextlib import contextmanager
 
 import pandas as pd
@@ -61,6 +62,19 @@ def statline(pairs: list[tuple[str, str]]) -> None:
     st.markdown(f'<div class="statline">{cells}</div>', unsafe_allow_html=True)
 
 
+def legend(items: list[tuple[str, str]]) -> None:
+    """A one-line glossary. Cheaper than a paragraph explaining the columns."""
+    cells = "".join(f'<div class="lg-item"><span class="lg-k">{k}</span>'
+                    f'<span class="lg-v">{v}</span></div>' for k, v in items)
+    st.markdown(f'<div class="legend">{cells}</div>', unsafe_allow_html=True)
+
+
+def playerhead(name: str, meta: str) -> None:
+    """The name bar at the top of a subject's sheet."""
+    st.markdown(f'<div class="phead"><h1 class="h1">{name}</h1>'
+                f'<p class="cap">{meta}</p></div>', unsafe_allow_html=True)
+
+
 def empty(text: str) -> None:
     """Placeholder shown before the reader has searched for anything."""
     st.markdown(f'<div class="empty">{text}</div>', unsafe_allow_html=True)
@@ -81,6 +95,43 @@ def figure(fig, cap: str = "", **kwargs) -> None:
 def table(df: pd.DataFrame, fmt: dict | None = None, height: int | None = None) -> None:
     st.dataframe(df.style.format(fmt or {}), width="stretch", hide_index=True,
                  **({"height": height} if height else {}))
+
+
+def statsheet(df: pd.DataFrame, fmt: dict | None = None,
+              left: tuple[str, ...] = (), signed_cols: tuple[str, ...] = (),
+              height: int | None = None) -> None:
+    """A box-score table: dark header, zebra rows, figures right-aligned.
+
+    Rendered as real HTML rather than through st.dataframe, whose grid draws to
+    a canvas and ignores almost all styling. The trade is column-header sorting,
+    which the explicit sort controls already cover.
+    """
+    fmt = fmt or {}
+    cols = list(df.columns)
+    head = "".join(
+        f'<th class="{"l" if c in left else ""}">{html.escape(str(c))}</th>'
+        for c in cols)
+
+    rows = []
+    for _, r in df.iterrows():
+        cells = []
+        for c in cols:
+            v = r[c]
+            try:
+                txt = format(v, fmt[c].strip("{:}")) if c in fmt else str(v)
+            except (ValueError, TypeError):
+                txt = "" if pd.isna(v) else str(v)
+            cls = "l" if c in left else ""
+            if c in signed_cols and isinstance(v, (int, float)) and not pd.isna(v):
+                cls += " pos" if v > 0 else (" neg" if v < 0 else "")
+            cells.append(f'<td class="{cls.strip()}">{html.escape(txt)}</td>')
+        rows.append("<tr>" + "".join(cells) + "</tr>")
+
+    style = f' style="max-height:{height}px"' if height else ""
+    st.markdown(
+        f'<div class="ss-wrap"{style}><table class="ss">'
+        f"<thead><tr>{head}</tr></thead><tbody>{''.join(rows)}</tbody>"
+        f"</table></div>", unsafe_allow_html=True)
 
 
 _CSS = f"""
@@ -123,8 +174,23 @@ _CSS = f"""
            font-variant-numeric: tabular-nums; }}
 
   .empty {{ border: 1px dashed {T.GRID}; border-radius: 2px; background: {T.SURFACE};
-            padding: 30px 22px; color: {T.MUTED}; font-size: 0.88rem;
+            padding: 26px 22px; color: {T.MUTED}; font-size: 0.88rem;
             line-height: 1.6; }}
+
+  .brand {{ color: {T.INK}; font-size: 0.86rem; font-weight: 700;
+            letter-spacing: 0.14em; text-transform: uppercase; margin: 0 0 2px;
+            padding-left: 9px; box-shadow: inset 3px 0 0 {T.SERIES[0]}; }}
+
+  .legend {{ display: flex; flex-wrap: wrap; gap: 0 26px; margin: 10px 0 4px; }}
+  .lg-item {{ display: flex; align-items: baseline; gap: 7px; }}
+  .lg-k {{ color: {T.INK}; font-size: 0.66rem; font-weight: 680;
+           letter-spacing: 0.09em; text-transform: uppercase; }}
+  .lg-v {{ color: {T.MUTED}; font-size: 0.82rem; }}
+
+  .phead {{ border-left: 3px solid {T.SERIES[0]}; padding-left: 12px;
+            margin: 0 0 10px; }}
+  .phead .h1 {{ margin-bottom: 2px; }}
+  .phead .cap {{ margin-top: 0; }}
 
   /* ---------- sidebar as a nav ----------
      The radio dot sits three divs deep inside the option label, so
@@ -178,6 +244,26 @@ _CSS = f"""
   /* ---------- tables: the point of the page ---------- */
   [data-testid="stDataFrame"] {{ font-size: 0.85rem; }}
   [data-testid="stDataFrame"] * {{ font-variant-numeric: tabular-nums; }}
+
+  /* box-score sheet */
+  .ss-wrap {{ overflow: auto; border: 1px solid {T.GRID}; border-radius: 2px;
+              background: {T.SURFACE}; margin: 2px 0 2px; }}
+  .ss {{ width: 100%; border-collapse: collapse; font-size: 0.84rem;
+         font-variant-numeric: tabular-nums; }}
+  .ss thead th {{ position: sticky; top: 0; z-index: 2;
+                  background: {T.INK}; color: #fff;
+                  font-size: 0.64rem; font-weight: 680; letter-spacing: 0.08em;
+                  text-transform: uppercase; white-space: nowrap;
+                  padding: 8px 11px; text-align: right; }}
+  .ss thead th.l {{ text-align: left; }}
+  .ss tbody td {{ padding: 6px 11px; text-align: right; color: {T.INK};
+                  border-bottom: 1px solid {T.GRID}; white-space: nowrap; }}
+  .ss tbody td.l {{ text-align: left; font-weight: 560; }}
+  .ss tbody tr:nth-child(even) {{ background: {T.PLANE}; }}
+  .ss tbody tr:hover {{ background: #eef3fb; }}
+  .ss tbody tr:last-child td {{ border-bottom: none; }}
+  .ss .pos {{ color: #1c5cab; font-weight: 620; }}
+  .ss .neg {{ color: #a83232; font-weight: 620; }}
 
   hr {{ border-color: {T.GRID}; }}
   a {{ color: {T.SERIES[0]}; }}

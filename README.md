@@ -106,12 +106,10 @@ half signal; a single zone within a single season never gets close.
 
 | Page | What it does |
 |---|---|
-| **Search** | Type a player's name, get his page: summary strip, hex shot chart, zone table, season history and league ranks. Accent-folded, so `jokic` finds Jokić |
-| **Leaders** | The whole league in one sortable table, filtered by season and minimum attempts |
+| **Players** | The landing page. Type a name, get his sheet: summary strip, hex shot chart, zone table, season history, league ranks and a shot-diet prescription. Accent-folded, so `jokic` finds Jokić |
+| **Leaders** | The whole league in one box score, filtered by season and minimum attempts, sorted by any measure |
 | **Teams** | All thirty offences, then any single team's roster |
-| **Shot-diet optimiser** | Search a player, set the move budget, get a prescription |
-| **Findings** | The three results, each with the evidence behind it |
-| **Method** | Model metrics, calibration, the guards and the limits |
+| **Findings** | The three results with the evidence behind each, plus the method, guards and limits |
 
 ![The empty search state before anything has been looked up](docs/search-empty.png)
 

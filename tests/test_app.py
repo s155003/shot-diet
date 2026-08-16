@@ -11,8 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 APP = str(ROOT / "app" / "streamlit_app.py")
 sys.path[:0] = [str(ROOT / "app"), str(ROOT / "src")]
 
-PAGES = ["Search", "Leaders", "Teams", "Shot-diet optimiser", "Findings", "Method"]
-SEARCH_FIRST = ["Search", "Shot-diet optimiser"]
+PAGES = ["Players", "Leaders", "Teams", "Findings"]
+SEARCH_FIRST = ["Players"]
 
 
 def run(page: str) -> AppTest:
@@ -45,7 +45,7 @@ def test_nothing_loads_before_a_search(page: str) -> None:
     txt = body(at)
     assert 'class="empty"' in txt, f"{page} shows data before anything is searched"
     assert 'class="statline"' not in txt, f"{page} shows a summary unprompted"
-    assert not at.dataframe, f"{page} rendered {len(at.dataframe)} tables unprompted"
+    assert "<table" not in txt, f"{page} rendered a table unprompted"
 
 
 def pick(at: AppTest, name: str) -> AppTest:
@@ -63,22 +63,22 @@ def pick(at: AppTest, name: str) -> AppTest:
 
 def test_search_finds_a_player_despite_accents() -> None:
     """Typing `jokic` has to find `Nikola Jokić`, or the search is useless."""
-    at = run("Search")
+    at = run("Players")
     at = pick(at, "jokic")
     assert "Jokić" in body(at), "accent-folded search did not reach the player"
     assert 'class="statline"' in body(at), "no summary strip after choosing a player"
-    assert at.dataframe, "no zone table after choosing a player"
+    assert "<table" in body(at), "no zone table after choosing a player"
 
 
 def test_search_reports_no_match() -> None:
-    at = run("Search")
+    at = run("Players")
     at.text_input[0].set_value("zzzznotaplayer").run()
     assert not at.exception, [e.value for e in at.exception]
     assert "No player matching" in body(at)
 
 
 def test_optimiser_responds_to_budget() -> None:
-    at = run("Shot-diet optimiser")
+    at = run("Players")
     at = pick(at, "jokic")
     before = body(at)
     at.slider[0].set_value(20).run()
@@ -88,13 +88,26 @@ def test_optimiser_responds_to_budget() -> None:
 
 def test_leaders_sorts() -> None:
     at = run("Leaders")
-    assert at.dataframe, "leaders table missing"
-    sort_by = next(s for s in at.selectbox if s.label == "Sort by")
-    top_before = at.dataframe[0].value.iloc[0]["Player"]
-    sort_by.set_value("Shot making").run()
+    assert "<table" in body(at), "leaders table missing"
+    before = body(at)
+    next(s for s in at.selectbox if s.label == "Sort by").set_value(
+        "Shot making").run()
     assert not at.exception, [e.value for e in at.exception]
-    assert at.dataframe[0].value.iloc[0]["Player"] != top_before, \
-        "changing the sort did not reorder the table"
+    assert body(at) != before, "changing the sort did not reorder the table"
+
+
+def test_nav_stays_small() -> None:
+    """Four sections. Every extra one is a decision the reader has to make."""
+    at = AppTest.from_file(APP, default_timeout=180)
+    at.run()
+    assert len(at.sidebar.radio[0].options) <= 4, at.sidebar.radio[0].options
+
+
+def test_landing_explains_itself() -> None:
+    at = run("Players")
+    txt = body(at)
+    assert "better shooter" in txt, "no plain-English description on the landing"
+    assert 'class="legend"' in txt, "no column glossary on the landing page"
 
 
 def test_no_bare_stat_tiles_anywhere() -> None:

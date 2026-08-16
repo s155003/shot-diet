@@ -41,15 +41,13 @@ def main() -> None:
         pg.keyboard.press("Enter")
         pg.wait_for_timeout(5000)
         shot("player")
+        shot("prescription", scroll=1500)
 
         nav("Leaders")
         shot("leaders")
 
         nav("Findings")
         shot("findings")
-
-        nav("Shot-diet optimiser")
-        shot("optimiser-empty")
 
         b.close()
 
