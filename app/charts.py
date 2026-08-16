@@ -128,6 +128,23 @@ def selection_vs_making(ps: pd.DataFrame, highlight: list[str] | None = None,
                    ytitle="Shot making (points per 100 above expectation)")
 
 
+def player_history(hist: pd.DataFrame) -> go.Figure:
+    """One player's split, season by season, as paired bars."""
+    d = hist.sort_values("SEASON")
+    fig = go.Figure()
+    for name, col, colour in (("Shot selection", "selection_p100", T.SERIES[0]),
+                              ("Shot making", "making_p100", T.SERIES[1])):
+        fig.add_trace(go.Bar(
+            x=d["SEASON"], y=d[col], name=name,
+            marker=dict(color=colour, line=dict(width=2, color=T.SURFACE)),
+            customdata=d["fga"],
+            hovertemplate="%{x}<br>" + name + ": %{y:+.1f} per 100"
+                          "<br>%{customdata:,.0f} attempts<extra></extra>"))
+    fig.add_hline(y=0, line=dict(color=T.AXIS, width=1))
+    fig.update_layout(barmode="group", bargap=0.42, bargroupgap=0.06)
+    return T.style(fig, height=300, ytitle="Points per 100")
+
+
 def zone_prescription(det: pd.DataFrame, zone_order: list[str]) -> go.Figure:
     """Current vs prescribed share of attempts, by zone.
 

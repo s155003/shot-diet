@@ -28,16 +28,34 @@ def run(page: str) -> AppTest:
 @pytest.mark.parametrize("page", PAGES)
 def test_page_renders(page: str) -> None:
     at = run(page)
-    assert at.title, f"{page} rendered no title"
+    # Headings are custom editorial markup rather than st.title, so check the
+    # page actually produced prose.
+    body = " ".join(str(m.value) for m in at.markdown)
+    assert "ed-h1" in body, f"{page} rendered no heading"
+    assert len(body) > 400, f"{page} rendered almost nothing"
+
+
+def _prose(at: AppTest) -> str:
+    return " ".join(str(m.value) for m in at.markdown)
 
 
 def test_optimiser_responds_to_budget() -> None:
     """Moving the budget slider must change the prescription."""
     at = run("Shot-diet optimiser")
-    small = at.metric[2].value
+    before = _prose(at)
     at.slider[0].set_value(20).run()
     assert not at.exception, [e.value for e in at.exception]
-    assert at.metric[2].value != small, "budget slider did not change the result"
+    assert _prose(at) != before, "budget slider did not change the result"
+
+
+def test_numbers_stay_behind_disclosure() -> None:
+    """The landing page argues in prose; exact figures live in expanders."""
+    at = run("The finding")
+    labels = [str(e.label) for e in at.expander]
+    assert labels, "no progressive disclosure on the landing page"
+    assert all(lbl.lower().startswith("show") for lbl in labels), labels
+    # Stat tiles were the thing that shouted; there should be none left.
+    assert not at.metric, f"{len(at.metric)} bare stat tiles still on the page"
 
 
 def test_player_page_switches_player() -> None:
