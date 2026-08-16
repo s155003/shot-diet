@@ -1,0 +1,45 @@
+2021-22: fetching
+    10/01 -> 16,707 shots
+    11/01 -> 39,624 shots
+    12/01 -> 36,565 shots
+    01/01 -> 40,576 shots
+    02/01 -> 28,902 shots
+    03/01 -> 40,286 shots
+    04/01 -> 14,062 shots
+2021-22: 216,722 shots, 1,230 games -> shots_2021_22.parquet
+2022-23: fetching
+    10/01 -> 18,187 shots
+    11/01 -> 38,901 shots
+    12/01 -> 39,086 shots
+    01/01 -> 39,271 shots
+    02/01 -> 28,754 shots
+    03/01 -> 40,384 shots
+    04/01 -> 12,637 shots
+2022-23: 217,220 shots, 1,230 games -> shots_2022_23.parquet
+2023-24: fetching
+    10/01 ->  9,693 shots
+    11/01 -> 38,928 shots
+    12/01 -> 37,195 shots
+    01/01 -> 40,931 shots
+    02/01 -> 31,176 shots
+    03/01 -> 40,375 shots
+    04/01 -> 20,402 shots
+2023-24: 218,700 shots, 1,230 games -> shots_2023_24.parquet
+2024-25: fetching
+    10/01 -> 12,592 shots
+    11/01 -> 39,394 shots
+    12/01 -> 33,949 shots
+    01/01 -> 40,503 shots
+    02/01 -> 31,818 shots
+    03/01 -> 42,393 shots
+    04/01 -> 18,878 shots
+2024-25: 219,527 shots, 1,230 games -> shots_2024_25.parquet
+2025-26: fetching
+    10/01 -> 14,234 shots
+    11/01 -> 39,092 shots
+    12/01 -> 35,429 shots
+    01/01 -> 41,454 shots
+    02/01 -> 29,545 shots
+    03/01 -> 42,163 shots
+    04/01 -> 17,243 shots
+2025-26: 219,160 shots, 1,230 games -> shots_2025_26.parquet

@@ -1,0 +1,15 @@
+                  comparison  mean_p100    ci_low  ci_high  pct_positive    n  move_budget
+EB vs. league-average advice  -0.003938 -0.025411 0.018402     21.373308 1034         0.03
+             EB vs. unshrunk   0.206581  0.163735 0.249680     41.392650 1034         0.03
+EB vs. league-average advice  -0.010061 -0.042734 0.025454     23.791103 1034         0.05
+             EB vs. unshrunk   0.325638  0.259084 0.395257     43.230174 1034         0.05
+EB vs. league-average advice  -0.018717 -0.076773 0.044330     26.692456 1034         0.10
+             EB vs. unshrunk   0.585568  0.462823 0.710938     44.487427 1034         0.10
+EB vs. league-average advice   0.032306 -0.056211 0.120660     22.340426 1034         0.20
+             EB vs. unshrunk   1.153700  0.921326 1.390513     47.098646 1034         0.20
+
+ move_budget  median_prescription_gap_pct  pct_identical  p90_gap_pct
+        0.03                     0.000000      55.275779     3.000000
+        0.05                     0.000000      50.839329     5.000000
+        0.10                     0.817536      45.383693    10.000000
+        0.20                     0.000000      55.035971    12.807327

@@ -1,0 +1,50 @@
+[20:00:47] building feature table
+[20:00:51]   1,087,633 shots across 5 seasons (3,696 backcourt/heave attempts excluded)
+[20:00:51] out-of-fold xPPS (location only)
+    fold 1/5 done (217,527 held out)
+    fold 2/5 done (217,527 held out)
+    fold 3/5 done (217,527 held out)
+    fold 4/5 done (217,526 held out)
+    fold 5/5 done (217,526 held out)
+[20:01:40] out-of-fold xPPS (location + action type)
+    fold 1/5 done (217,527 held out)
+    fold 2/5 done (217,527 held out)
+    fold 3/5 done (217,527 held out)
+    fold 4/5 done (217,526 held out)
+    fold 5/5 done (217,526 held out)
+[20:02:33] baselines
+[20:02:46] scoring models
+                                       model  log_loss    brier      auc  log_loss_gain_pct
+                       League mean make rate  0.691480 0.249167 0.500000           0.000000
+         Distance spline logistic (baseline)  0.654179 0.230936 0.642259           5.394432
+           Zone average make rate (baseline)  0.658711 0.233038 0.633328           4.738938
+      xPPS-loc (gradient boosting, geometry)  0.649160 0.228923 0.648137           6.120201
+xPPS-full (gradient boosting, + action type)  0.635770 0.223576 0.663272           8.056578
+[20:02:50]   calibration gap: 0.004 pts per 100 shots
+[20:02:50] player and team decomposition
+[20:02:51] empirical-Bayes zone rates
+[20:02:52] reliability
+   metric  split_half_r  spearman_brown_r  n_player_seasons  min_attempts_per_half
+selection      0.949141          0.973907              1629                    100
+   making      0.453413          0.623928              1629                    100
+   metric    yoy_r  r_squared  n_pairs
+selection 0.895298   0.801559     1034
+   making 0.578090   0.334188     1034
+    total 0.619215   0.383427     1034
+component  observed_sd_p100  reliability  repeatable_sd_p100  noise_sd_p100  corr_with_total  share_of_repeatable_spread
+selection          8.483187     0.973907            8.371778       1.370325         0.586214                    0.593906
+   making          8.764045     0.623928            6.922642       5.374524         0.620516                    0.406094
+[20:02:54]   corr(selection, making) across players = -0.272
+[20:02:56]   selection: 50% reliable at 11 attempts
+[20:02:57]   making: 50% reliable at 311 attempts
+[20:02:57] shot-diet optimiser (+ league-only and unshrunk controls)
+[20:03:18]   1,668 player-seasons optimised, median gain 2.44 pts/100, median volume moved 5.0%
+[20:03:18] backtesting prescriptions out of sample
+                             comparison  mean_p100    ci_low  ci_high  pct_positive    n
+         EB prescription vs. do nothing   2.490299  2.432511 2.549841     99.516441 1034
+   League-average advice vs. do nothing   2.500361  2.442553 2.562198     99.516441 1034
+Unshrunk (noise-chasing) vs. do nothing   2.164661  2.086334 2.240342     95.357834 1034
+           EB vs. league-average advice  -0.010061 -0.042734 0.025454     23.791103 1034
+                        EB vs. unshrunk   0.325638  0.259084 0.395257     43.230174 1034
+[20:03:18] saving shot sample for the court charts
+[20:03:18] done in 2.5 min -> reports/summary.json

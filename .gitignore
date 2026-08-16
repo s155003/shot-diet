@@ -1,0 +1,14 @@
+# Raw shot pulls and cached model predictions are reproducible with
+# `python src/fetch.py && python src/run_pipeline.py`; only the small derived
+# tables in data/processed/ are committed.
+data/raw/
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+.env
+.DS_Store
+.ipynb_checkpoints/
+reports/screenshots/

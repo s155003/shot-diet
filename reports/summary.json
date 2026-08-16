@@ -1,0 +1,165 @@
+{
+  "seasons": [
+    "2021-22",
+    "2022-23",
+    "2023-24",
+    "2024-25",
+    "2025-26"
+  ],
+  "n_shots": 1087633,
+  "n_excluded_backcourt_or_heave": 3696,
+  "n_players": 1017,
+  "min_fga_for_leaderboards": 200,
+  "calibration": {
+    "league_actual_pps": 1.0877814483378125,
+    "league_model_xpps": 1.0878219404764256,
+    "calibration_gap_p100": 0.004049213861301304,
+    "max_calibration_bin_error": 0.0076293962341838495
+  },
+  "model_metrics": [
+    {
+      "model": "League mean make rate",
+      "log_loss": 0.6914800926350352,
+      "brier": 0.24916691933763085,
+      "auc": 0.5,
+      "log_loss_gain_pct": 0.0
+    },
+    {
+      "model": "Distance spline logistic (baseline)",
+      "log_loss": 0.6541786722250494,
+      "brier": 0.23093552290543273,
+      "auc": 0.6422592455185219,
+      "log_loss_gain_pct": 5.394431568932169
+    },
+    {
+      "model": "Zone average make rate (baseline)",
+      "log_loss": 0.6587112820066194,
+      "brier": 0.23303838003945204,
+      "auc": 0.6333277325435853,
+      "log_loss_gain_pct": 4.738937675493024
+    },
+    {
+      "model": "xPPS-loc (gradient boosting, geometry)",
+      "log_loss": 0.649160123714258,
+      "brier": 0.2289226276837112,
+      "auc": 0.6481368282023736,
+      "log_loss_gain_pct": 6.12020062060033
+    },
+    {
+      "model": "xPPS-full (gradient boosting, + action type)",
+      "log_loss": 0.6357704615931848,
+      "brier": 0.22357628472480653,
+      "auc": 0.6632722797199717,
+      "log_loss_gain_pct": 8.056577714270368
+    }
+  ],
+  "split_half": [
+    {
+      "metric": "selection",
+      "split_half_r": 0.9491405159581322,
+      "spearman_brown_r": 0.9739067124071007,
+      "n_player_seasons": 1629,
+      "min_attempts_per_half": 100
+    },
+    {
+      "metric": "making",
+      "split_half_r": 0.45341250959532103,
+      "spearman_brown_r": 0.6239281781351481,
+      "n_player_seasons": 1629,
+      "min_attempts_per_half": 100
+    }
+  ],
+  "year_over_year": [
+    {
+      "metric": "selection",
+      "yoy_r": 0.8952983858315348,
+      "r_squared": 0.8015591996725516,
+      "n_pairs": 1034
+    },
+    {
+      "metric": "making",
+      "yoy_r": 0.578089718137776,
+      "r_squared": 0.3341877222166133,
+      "n_pairs": 1034
+    },
+    {
+      "metric": "total",
+      "yoy_r": 0.6192151300517379,
+      "r_squared": 0.38342737728499066,
+      "n_pairs": 1034
+    }
+  ],
+  "spread": [
+    {
+      "component": "selection",
+      "observed_sd_p100": 8.483186688668036,
+      "reliability": 0.9739067124071007,
+      "repeatable_sd_p100": 8.371778015309443,
+      "noise_sd_p100": 1.3703245079819728,
+      "corr_with_total": 0.5862141473842107,
+      "share_of_repeatable_spread": 0.5939062886786529
+    },
+    {
+      "component": "making",
+      "observed_sd_p100": 8.764044505427009,
+      "reliability": 0.6239281781351481,
+      "repeatable_sd_p100": 6.9226420212306445,
+      "noise_sd_p100": 5.374523563907507,
+      "corr_with_total": 0.6205164968699077,
+      "share_of_repeatable_spread": 0.4060937113213472
+    }
+  ],
+  "corr_selection_making": -0.27156354394896043,
+  "stabilization_attempts_50pct": {
+    "selection": 10.999749993749843,
+    "making": 310.9922498062451
+  },
+  "prescription": {
+    "n_player_seasons": 1668,
+    "median_gain_p100": 2.4360427822797903,
+    "mean_gain_p100": 2.461960282127218
+  },
+  "backtest": [
+    {
+      "comparison": "EB prescription vs. do nothing",
+      "mean_p100": 2.490299336897236,
+      "ci_low": 2.4325105491650136,
+      "ci_high": 2.5498411796681135,
+      "pct_positive": 99.5164410058027,
+      "n": 1034
+    },
+    {
+      "comparison": "League-average advice vs. do nothing",
+      "mean_p100": 2.5003605592085307,
+      "ci_low": 2.4425533364392473,
+      "ci_high": 2.562197916784509,
+      "pct_positive": 99.5164410058027,
+      "n": 1034
+    },
+    {
+      "comparison": "Unshrunk (noise-chasing) vs. do nothing",
+      "mean_p100": 2.164661447815656,
+      "ci_low": 2.0863337155110373,
+      "ci_high": 2.2403419836145035,
+      "pct_positive": 95.35783365570599,
+      "n": 1034
+    },
+    {
+      "comparison": "EB vs. league-average advice",
+      "mean_p100": -0.010061222311295253,
+      "ci_low": -0.04273379547795787,
+      "ci_high": 0.025453821864718087,
+      "pct_positive": 23.791102514506772,
+      "n": 1034
+    },
+    {
+      "comparison": "EB vs. unshrunk",
+      "mean_p100": 0.3256378890815798,
+      "ci_low": 0.2590843596502758,
+      "ci_high": 0.395256880787373,
+      "pct_positive": 43.23017408123791,
+      "n": 1034
+    }
+  ],
+  "runtime_minutes": 2.5
+}
