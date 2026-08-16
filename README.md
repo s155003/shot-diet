@@ -4,6 +4,8 @@
 
 **AQX Sports Analytics Data Bowl 3.0**
 
+**▶ Live app: https://shot-diet-eb5nmvww489spbby72agpr.streamlit.app/**
+
 ### In plain English
 
 Two players score the same. One of them is a better shooter. The other just takes
@@ -231,11 +233,10 @@ python src/sensitivity.py        # robustness checks on the headline null
 `tests/shoot_docs.py` regenerates the screenshots above and needs
 `python -m playwright install chromium` first.
 
-### Hosting a live link
+### Hosted
 
-Because the processed tables ship in the repo, this deploys to
-[Streamlit Community Cloud](https://share.streamlit.io) with no build step: point it at
-this repo with `app/streamlit_app.py` as the entry point and Python 3.10+.
+Running on Streamlit Community Cloud at https://shot-diet-eb5nmvww489spbby72agpr.streamlit.app/ — no build step, because the processed
+tables ship in the repo and nothing is fetched at runtime.
 
 ### Layout
 

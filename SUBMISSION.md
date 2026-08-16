@@ -162,6 +162,8 @@ model so reallocation accounts for the defence adjusting.
 
 ---
 
+**Live app:** https://shot-diet-eb5nmvww489spbby72agpr.streamlit.app/
+
 **Repo:** https://github.com/s155003/shot-diet
 
 **Run it** (Python 3.10+, two commands, nothing downloaded at startup):
