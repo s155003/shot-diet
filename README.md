@@ -14,9 +14,15 @@ Shot Diet pulls **1,087,633 regular-season field goal attempts** across five sea
 measures how *knowable* each one is, and then tests whether the resulting advice
 survives contact with the following season.
 
-![Shot Diet dashboard showing that shot selection becomes 50 percent reliable after 11
-attempts while shot making needs 311, with reliability bar charts and stabilisation
-curves](docs/finding.png)
+![Shot Diet dashboard. An animated banner shows a silhouette driving from the
+three-point line and dunking over a defender, captioned with the restricted area's
+28.4 percent share and 1.34 points per attempt. Below it, stat tiles report that shot
+selection becomes 50 percent reliable after 11 attempts while shot making needs
+311](docs/finding.png)
+
+<sub>The banner figures are original silhouettes drawn in SVG, not NBA footage or any
+real player's likeness. The hoop is the same geometry the shot charts use and the
+caption numbers come out of `data/processed/`.</sub>
 
 ---
 

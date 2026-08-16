@@ -6,6 +6,7 @@ import pandas as pd
 import streamlit as st
 
 import data_access as D  # noqa: F401  (also puts src/ on the path)
+import banner
 import charts as C
 import court
 import theme as T
@@ -62,6 +63,7 @@ with st.sidebar:
 # 1. the finding
 # ==========================================================================
 if page == "The finding":
+    banner.render()
     st.title("Which half of a shot can you actually coach?")
     st.markdown(
         '<p class="lede">Every field goal attempt is two decisions layered on top '
