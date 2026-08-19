@@ -481,7 +481,8 @@ no chunk reaches the cap.
 backcourt attempts and buzzer heaves dropped.
 
 **Six zones, not ten.** A left/right split made the empirical-Bayes prior swing by
-an order of magnitude between wings for the same shot — binomial noise, not talent.
+an order of magnitude between wings for the same shot. That is binomial noise
+rather than a real talent difference.
 
 **Rates shrunk, not trusted.** Method-of-moments beta-binomial prior.
 
@@ -496,7 +497,7 @@ across every attempt in the sample.
 <div class="note">
 
 **No defender.** The public feed has no defender distance, so selection means
-location, play type and clock — not whether the shot was open. Some of what lands in
+location, play type and clock, but not whether the shot was open. Some of what lands in
 shot making is really the ability to create separation.
 
 **Play type is a coarse, human-scored proxy.**

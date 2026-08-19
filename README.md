@@ -235,8 +235,9 @@ python src/sensitivity.py        # robustness checks on the headline null
 
 ### Hosted
 
-Running on Streamlit Community Cloud at https://shot-diet-eb5nmvww489spbby72agpr.streamlit.app/ — no build step, because the processed
-tables ship in the repo and nothing is fetched at runtime.
+Running on Streamlit Community Cloud at
+https://shot-diet-eb5nmvww489spbby72agpr.streamlit.app/ with no build step, because
+the processed tables ship in the repo and nothing is fetched at runtime.
 
 ### Layout
 
