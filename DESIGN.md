@@ -205,7 +205,8 @@ one:
 > easier shots. Shot Diet reads every shot of the last five seasons and splits a
 > player's scoring into those two halves.
 
-The glossary is a horizontal strip of `TERM — definition` pairs. It replaces what
+The glossary is a horizontal strip of pairs: a small uppercase term, then its
+definition in muted text beside it, no separator character. It replaces what
 would otherwise be a paragraph explaining the columns.
 
 ### 4.2 A subject sheet (player or team)
@@ -445,7 +446,13 @@ outer wrapper group.
    include: a literal `undefined` printed on every chart, labels drawn
    off-canvas, a colour scale stretched by outliers until all signal washed out,
    and a table with its last column cut off.
-2. **Search for `—` across the whole repository.** Expect zero.
+2. **Grep the repository for the em dash character** (U+2014). Expect zero hits
+   outside this file, which necessarily contains one instance in the line below
+   in order to name it.
+
+   ```
+   grep -rn '—' . --exclude=DESIGN.md
+   ```
 3. **Verify every CSS selector matches at least one element.**
 4. **Load the landing page and confirm nothing but the search box and the empty
    state is visible.**
