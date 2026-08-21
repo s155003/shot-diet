@@ -92,17 +92,21 @@ def player_search(names: list[str], key: str, season: str) -> str | None:
 
 
 PAGES = ["Players", "Leaders", "Teams", "Findings"]
-with st.sidebar:
+
+# Masthead: wordmark on the left, tabs across the top. A sidebar spends a fifth
+# of the width on four links and makes the tool feel like a dashboard rather
+# than a site you navigate.
+bar = st.columns([1.05, 3.4, 1.5], gap="small")
+with bar[0]:
+    st.markdown('<p class="brand">Shot Diet</p>', unsafe_allow_html=True)
+with bar[1]:
+    page = st.segmented_control("Section", PAGES, default=PAGES[0],
+                                label_visibility="collapsed") or PAGES[0]
+with bar[2]:
     st.markdown(
-        '<p class="brand">Shot Diet</p>'
-        '<p class="cap" style="margin:0 0 16px">NBA shot selection vs. shot making'
-        '</p>', unsafe_allow_html=True)
-    page = st.radio("Section", PAGES, label_visibility="collapsed")
-    ui.rule(16)
-    st.markdown(
-        f'<p class="cap">{SUM.get("n_shots", 0):,} shots · {SEASONS[-1]} to '
-        f'{SEASONS[0]}<br>Regular season, stats.nba.com.</p>',
-        unsafe_allow_html=True)
+        f'<p class="barmeta">{SUM.get("n_shots", 0):,} shots · {SEASONS[-1]} '
+        f'to {SEASONS[0]}</p>', unsafe_allow_html=True)
+st.markdown('<div class="barrule"></div>', unsafe_allow_html=True)
 
 
 # ==========================================================================

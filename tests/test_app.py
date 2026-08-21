@@ -19,7 +19,7 @@ def run(page: str) -> AppTest:
     at = AppTest.from_file(APP, default_timeout=180)
     at.run()
     assert not at.exception, f"{page}: {[e.value for e in at.exception]}"
-    at.sidebar.radio[0].set_value(page).run()
+    at.segmented_control[0].set_value(page).run()
     assert not at.exception, f"{page}: {[e.value for e in at.exception]}"
     return at
 
@@ -105,7 +105,7 @@ def test_nav_stays_small() -> None:
     """Four sections. Every extra one is a decision the reader has to make."""
     at = AppTest.from_file(APP, default_timeout=180)
     at.run()
-    assert len(at.sidebar.radio[0].options) <= 4, at.sidebar.radio[0].options
+    assert len(at.segmented_control[0].options) <= 4, at.segmented_control[0].options
 
 
 def test_landing_explains_itself() -> None:

@@ -141,7 +141,7 @@ _CSS = f"""
       background: transparent; height: 0; visibility: hidden; }}
   #MainMenu, footer, [data-testid="stDecoration"] {{ display: none; }}
   [data-testid="stMain"] {{ background: {T.PLANE}; }}
-  .block-container {{ padding-top: 2.1rem; padding-bottom: 4rem;
+  .block-container {{ padding-top: 1.5rem; padding-bottom: 4rem;
                       max-width: 1280px; }}
 
   /* ---------- type ---------- */
@@ -177,10 +177,6 @@ _CSS = f"""
             padding: 26px 22px; color: {T.MUTED}; font-size: 0.88rem;
             line-height: 1.6; }}
 
-  .brand {{ color: {T.INK}; font-size: 0.86rem; font-weight: 700;
-            letter-spacing: 0.14em; text-transform: uppercase; margin: 0 0 2px;
-            padding-left: 9px; box-shadow: inset 3px 0 0 {T.SERIES[0]}; }}
-
   .legend {{ display: flex; flex-wrap: wrap; gap: 0 26px; margin: 10px 0 4px; }}
   .lg-item {{ display: flex; align-items: baseline; gap: 7px; }}
   .lg-k {{ color: {T.INK}; font-size: 0.66rem; font-weight: 680;
@@ -192,23 +188,35 @@ _CSS = f"""
   .phead .h1 {{ margin-bottom: 2px; }}
   .phead .cap {{ margin-top: 0; }}
 
-  /* ---------- sidebar as a nav ----------
-     The radio dot sits three divs deep inside the option label, so
-     `label > div:first-child` misses it and hits the hidden input wrapper.
-     `data-selected` is a sturdier active hook than :has(input:checked). */
-  [data-testid="stSidebar"] {{ background: {T.SURFACE};
-      border-right: 1px solid {T.GRID}; }}
-  [data-testid="stSidebar"] .block-container {{ padding-top: 2rem; }}
-  [data-testid="stSidebar"] [role="radiogroup"] {{ gap: 2px; }}
-  [data-testid="stRadioOption"] {{ padding: 6px 12px; border-radius: 2px;
-      margin: 0; transition: background .12s; cursor: pointer; }}
-  [data-testid="stRadioOption"]:hover {{ background: {T.PLANE}; }}
-  [data-testid="stRadioOption"] > div > div > div:first-child {{ display: none; }}
-  [data-testid="stRadioOption"] p {{ font-size: 0.9rem; color: {T.INK_2}; }}
-  [data-testid="stRadioOption"][data-selected="true"] {{
-      background: {T.PLANE}; box-shadow: inset 2px 0 0 {T.SERIES[0]}; }}
-  [data-testid="stRadioOption"][data-selected="true"] p {{
-      color: {T.INK}; font-weight: 640; }}
+  /* ---------- masthead ---------- */
+  [data-testid="stSidebar"] {{ display: none; }}
+  .brand {{ color: {T.INK}; font-size: 1.02rem; font-weight: 720;
+            letter-spacing: -.02em; margin: 6px 0 0; }}
+  .barmeta {{ color: {T.MUTED}; font-size: 0.72rem; text-align: right;
+              margin: 11px 0 0; }}
+  .barrule {{ border-top: 1px solid {T.GRID}; margin: 6px 0 20px; }}
+
+  /* Segmented control restyled as tabs. Streamlit renders it as
+     [data-testid="stButtonGroup"] containing a role="radiogroup" of
+     button[data-variant="segmented_control"]; there is no stSegmentedControl
+     test id, and the active one is marked with aria-checked, not aria-pressed. */
+  [data-testid="stButtonGroup"] label {{ display: none; }}
+  [data-testid="stButtonGroup"] [role="radiogroup"] {{
+      gap: 4px; border: none; background: transparent; }}
+  button[data-variant="segmented_control"] {{
+      background: transparent !important; border: none !important;
+      border-radius: 0 !important; box-shadow: none !important;
+      padding: 6px 15px !important; min-height: 0 !important;
+      border-bottom: 2px solid transparent !important;
+      transition: color .12s, border-color .12s; }}
+  button[data-variant="segmented_control"] p {{
+      font-size: 0.9rem !important; font-weight: 560 !important;
+      color: {T.MUTED} !important; }}
+  button[data-variant="segmented_control"]:hover p {{ color: {T.INK} !important; }}
+  button[data-variant="segmented_control"][aria-checked="true"] {{
+      border-bottom: 2px solid {T.SERIES[0]} !important; }}
+  button[data-variant="segmented_control"][aria-checked="true"] p {{
+      color: {T.INK} !important; font-weight: 700 !important; }}
 
   /* ---------- controls ---------- */
   [data-testid="stWidgetLabel"] p {{
