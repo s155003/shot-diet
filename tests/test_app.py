@@ -15,12 +15,14 @@ PAGES = ["Players", "Leaders", "Teams", "Findings"]
 SEARCH_FIRST = ["Players"]
 
 
-def run(page: str) -> AppTest:
+def run(page: str | None) -> AppTest:
+    """Open a tab. None is the landing page, which is what no selection means."""
     at = AppTest.from_file(APP, default_timeout=180)
     at.run()
     assert not at.exception, f"{page}: {[e.value for e in at.exception]}"
-    at.segmented_control[0].set_value(page).run()
-    assert not at.exception, f"{page}: {[e.value for e in at.exception]}"
+    if page is not None:
+        at.segmented_control[0].set_value(page).run()
+        assert not at.exception, f"{page}: {[e.value for e in at.exception]}"
     return at
 
 
@@ -31,12 +33,7 @@ def body(at: AppTest) -> str:
 @pytest.mark.parametrize("page", PAGES)
 def test_page_renders(page: str) -> None:
     at = run(page)
-    if page == "Players":
-        # The landing masthead lives inside the hero iframe, so the page's own
-        # markdown carries the glossary rather than an h1.
-        assert 'class="legend"' in body(at), "Players rendered no masthead"
-    else:
-        assert '<h1 class="h1">' in body(at), f"{page} rendered no heading"
+    assert '<h1 class="h1">' in body(at), f"{page} rendered no heading"
 
 
 @pytest.mark.parametrize("page", SEARCH_FIRST)
@@ -108,12 +105,16 @@ def test_nav_stays_small() -> None:
     assert len(at.segmented_control[0].options) <= 4, at.segmented_control[0].options
 
 
-def test_landing_explains_itself() -> None:
-    """The landing page has to say what the product is before it asks for input."""
+def test_landing_is_the_court() -> None:
+    """No tab selected is the landing page, and it is the court."""
     import hero
 
-    at = run("Players")
-    assert 'class="legend"' in body(at), "no column glossary on the landing page"
+    at = run(None)
+    assert at.markdown, "landing rendered nothing"
+    # the landing is a single component, so the tools must not also render
+    assert not at.dataframe, "landing rendered a table"
+    assert 'class="stage"' in hero._TEMPLATE, "court is not the page"
+    assert 'class="mast"' in hero._TEMPLATE, "masthead is not on the court"
     assert "Shot Diet" in hero._TEMPLATE, "hero lost the project name"
     assert "wordmark" in hero._TEMPLATE, "project name is not the hero element"
     assert "good shooter" in hero._TEMPLATE, "hero lost the plain-English pitch"
@@ -133,10 +134,11 @@ def test_landing_explains_itself() -> None:
         ex["b"]["scored"] - ex["b"]["worth"]), "the contrast no longer holds"
 
 
-def test_hero_stands_down_once_a_player_is_chosen() -> None:
+def test_players_tab_is_the_tool_not_the_pitch() -> None:
+    """The landing sells; the Players tab gets straight to work."""
     at = run("Players")
-    at = pick(at, "jokic")
-    assert '<h1 class="h1">' in body(at), "no page heading once the hero steps aside"
+    assert '<h1 class="h1">' in body(at), "Players has no heading"
+    assert 'class="stage"' not in body(at), "the landing court leaked into a tool"
 
 
 def test_hero_data_is_real_and_inlined() -> None:

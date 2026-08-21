@@ -100,8 +100,10 @@ bar = st.columns([1.05, 3.4, 1.5], gap="small")
 with bar[0]:
     st.markdown('<p class="brand">Shot Diet</p>', unsafe_allow_html=True)
 with bar[1]:
-    page = st.segmented_control("Section", PAGES, default=PAGES[0],
-                                label_visibility="collapsed") or PAGES[0]
+    # No selection is the landing page, which keeps the tab bar at four tools
+    # rather than spending one of them on "Home".
+    page = st.segmented_control("Section", PAGES, default=None,
+                                label_visibility="collapsed")
 with bar[2]:
     st.markdown(
         f'<p class="barmeta">{SUM.get("n_shots", 0):,} shots · {SEASONS[-1]} '
@@ -112,31 +114,26 @@ st.markdown('<div class="barrule"></div>', unsafe_allow_html=True)
 # ==========================================================================
 # Players: the landing page. Search, then one player's sheet.
 # ==========================================================================
+if page is None:
+    hero.render()
+    st.stop()
+
+
 if page == "Players":
-    # The masthead is filled in after the search runs, so the hero can stand
-    # down once a player is on screen. A container holds its place in the
-    # layout even though it is populated later.
-    top = st.container()
+    ui.kicker("Players")
+    ui.title("Look up any NBA player")
+    ui.legend([
+        ("Selection", "how good the shots he took were"),
+        ("Making", "how well he made them, against what an average NBA "
+                   "player would"),
+        ("Both", "points per 100 shots, versus the league that season"),
+    ])
 
     c = st.columns([1, 3.4])
     season = c[0].selectbox("Season", SEASONS, index=0)
     names = roster(season)
     with c[1]:
         who = player_search(names, "search", season)
-
-    with top:
-        if who is None:
-            hero.render()
-        else:
-            ui.kicker("Shot Diet")
-            ui.title("Look up any NBA player")
-        ui.legend([
-            ("Selection", "how good the shots he took were"),
-            ("Making", "how well he made them, against what an average NBA "
-                       "player would"),
-            ("Both", "points per 100 shots, versus the league that season"),
-        ])
-
     if who is None:
         st.stop()
 

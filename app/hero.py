@@ -1,24 +1,31 @@
-"""Landing hero: what the product is, in the order a stranger needs it.
+"""The landing page: a half court, with the product written on it.
 
-Structure is problem, method, evidence, consequence. Earlier versions stated the
-concept ("scoring split into shot quality and shot making") and readers did not
-follow, because a concept gives no reason to believe the two halves can come
-apart. Two changes fixed that:
+The court is not an illustration beside the copy, it is the page. The wordmark
+and the pitch sit in the backcourt, the empty floor beyond the arc where no
+shots are taken, so the type never fights the data. Below the arc the same
+hexagons carry the finding: blue at the rim and in the corners, red through the
+mid-range.
 
-* **Say how it knows.** The page states the counterfactual outright: for every
-  shot, what would an average NBA player have scored on that exact shot?
-  Without that sentence "his shots were worth 1.45" is a number from nowhere,
-  and that was the single largest gap in comprehension.
-* **Show it happening.** Gobert outscores Doncic and is the worse shooter. Until
-  a reader watches four real numbers do that, the idea sounds like wordplay.
+Structure of the copy is problem, method, evidence, consequence. Earlier drafts
+stated the concept and readers did not follow, because a concept gives no reason
+to believe the two halves can come apart. Two things fixed that and must
+survive any rewrite:
 
-The court is the product's own chart rather than decoration, which is the
-written exception to the no-decorative-animation rule in DESIGN.md section 6.2.
-Colour is centred on one point per attempt, not league average points per shot:
-league average is 1.09, dragged upward by the rim's volume, so centring there
-paints nearly the whole floor red and the picture stops meaning anything. Hex
-area scales with volume, capped at the 78th percentile; uniform hexes were tried
-and produce a solid wall that buries the court lines.
+* **Say how it knows.** For every shot, what would an average NBA player have
+  scored on that exact shot? Without that sentence "his shots were worth 1.45"
+  is a number from nowhere, and that was the largest gap in comprehension.
+* **Show it happening.** Gobert outscores Doncic and is the worse shooter.
+
+Colour is centred on one point per attempt, not on league average points per
+shot: league average is 1.09, dragged upward by the rim's volume, so centring
+there paints nearly the whole floor red and the picture stops meaning anything.
+Hex area scales with volume, capped at the 78th percentile; uniform hexes were
+tried and produce a solid wall that buries the court lines.
+
+This is the written exception to the no-decorative-animation rule, recorded in
+DESIGN.md section 6.2. The court is the product's own chart, so the striking
+element on the page is information. Strip the data out and it becomes
+decoration and has to go.
 """
 from __future__ import annotations
 
@@ -31,7 +38,7 @@ import streamlit as st
 import theme as T
 from data_access import PROCESSED
 
-HEIGHT = 646
+HEIGHT = 1400
 
 # The pair the pitch rests on. Gobert scores more per shot and is the worse
 # shooter, which is the whole idea in one row.
@@ -69,61 +76,68 @@ _TEMPLATE = r"""
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;background:__PLANE__;
             font-family:__FONT__;-webkit-font-smoothing:antialiased}
-  .hero{background:__SURFACE__;border:1px solid rgba(11,11,11,.12);
-        border-radius:3px;padding:22px 28px 20px}
 
-  /* The wordmark sits over a dashed rule in the ball colour, echoing the
-     three-point line below it, so the identity and the graphic are one idea. */
-  .wordmark{font-size:2.3rem;line-height:1;letter-spacing:-.035em;font-weight:720;
-            color:__INK__;margin:0}
-  .brandrule{height:0;border-top:3px dashed __BALL__;width:98px;margin:10px 0 12px}
-  .tag{font-size:1.02rem;line-height:1.3;letter-spacing:-.01em;font-weight:640;
-       color:__INK__;margin:0 0 14px;max-width:60ch}
+  /* The court is the stage; the masthead is positioned inside it, in the
+     backcourt, where the data never reaches. */
+  .stage{position:relative;background:__SURFACE__;
+         border:1px solid rgba(11,11,11,.12);border-radius:3px;overflow:hidden}
+  .stage svg{display:block;width:100%;height:auto}
 
-  .step{display:flex;gap:11px;align-items:flex-start;margin:0 0 9px;max-width:82ch}
-  .num{flex:0 0 auto;width:17px;height:17px;border-radius:2px;margin-top:2px;
-       background:__INK__;color:#fff;font-size:.63rem;font-weight:700;
+  .mast{position:absolute;left:0;right:0;top:4.2%;text-align:center;
+        padding:0 24px;pointer-events:none}
+  .wordmark{font-size:clamp(2.4rem,5.2vw,4rem);line-height:.96;
+            letter-spacing:-.042em;font-weight:730;color:__INK__;margin:0}
+  .brandrule{height:0;border-top:3px dashed __BALL__;width:132px;
+             margin:14px auto 15px}
+  .tag{font-size:clamp(.95rem,1.5vw,1.22rem);line-height:1.32;font-weight:620;
+       letter-spacing:-.012em;color:__INK__;margin:0 auto;max-width:34ch}
+  .said{margin:13px auto 0;max-width:52ch;color:__INK2__;
+        font-size:clamp(.8rem,1.05vw,.95rem);line-height:1.5}
+
+  .courtcap{margin:0 0 18px;color:__MUTED__;font-size:.82rem;line-height:1.5;
+            max-width:86ch}
+  .courtcap b{font-weight:660}
+
+  /* the explanation, under the court */
+  .below{padding:26px 30px 24px}
+  .step{display:flex;gap:12px;align-items:flex-start;margin:0 0 11px;max-width:88ch}
+  .num{flex:0 0 auto;width:18px;height:18px;border-radius:2px;margin-top:2px;
+       background:__INK__;color:#fff;font-size:.64rem;font-weight:700;
        display:flex;align-items:center;justify-content:center}
-  .step p{margin:0;color:__INK2__;font-size:.91rem;line-height:1.5}
+  .step p{margin:0;color:__INK2__;font-size:.93rem;line-height:1.52}
   .step b{color:__INK__;font-weight:640}
 
-  .cols{display:grid;grid-template-columns:minmax(0,49%) minmax(0,51%);
-        gap:22px;align-items:start;margin-top:14px}
-
+  .cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+        gap:26px;align-items:start;margin-top:6px}
   .ex{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;
-      font-size:.83rem}
-  .ex thead th{color:__MUTED__;font-size:.57rem;font-weight:660;line-height:1.25;
+      font-size:.85rem}
+  .ex thead th{color:__MUTED__;font-size:.58rem;font-weight:660;line-height:1.25;
                letter-spacing:.06em;text-transform:uppercase;text-align:right;
                padding:0 8px 5px;border-bottom:1px solid __GRID__;white-space:nowrap}
   .ex th.l,.ex td.l{text-align:left}
-  .ex td{padding:7px 8px;text-align:right;color:__INK__;white-space:nowrap}
+  .ex td{padding:8px;text-align:right;color:__INK__;white-space:nowrap}
   .ex td.l:first-child{font-weight:640}
   .ex tbody tr+tr td{border-top:1px solid __GRID__}
   .pos{color:#1c5cab;font-weight:660}
   .neg{color:#a83232;font-weight:660}
-  .verdict{margin:11px 0 0;color:__INK__;font-size:.89rem;line-height:1.5;
-           font-weight:600}
-  .why{margin:11px 0 0;color:__INK2__;font-size:.83rem;line-height:1.5;
-       padding-left:11px;border-left:2px solid __GRID__}
-  .doit{margin-top:15px;padding-top:13px;border-top:1px solid __GRID__}
+  .verdict{margin:12px 0 0;color:__INK__;font-size:.92rem;line-height:1.5;
+           font-weight:620}
+  .why{margin:0;color:__INK2__;font-size:.87rem;line-height:1.55;
+       padding-left:13px;border-left:2px solid __GRID__}
 
-  svg{display:block;width:100%;height:232px}
-  .ccap{color:__MUTED__;font-size:.72rem;line-height:1.45;margin:5px 0 0}
-  .ccap b{font-weight:640}
-
-  .line{stroke:__AXIS__;stroke-width:1.5;fill:none}
-  .paint{stroke:__GRID__;stroke-width:1.5;fill:none}
-  .arc{stroke:__BALL__;stroke-width:3.2;fill:none;stroke-linecap:round;
-       stroke-dasharray:11 8}
-  .rim{stroke:__BALL__;stroke-width:3.4;stroke-linecap:round}
-  .net{stroke:__AXIS__;stroke-width:1.2;fill:none}
-  .hex{stroke:__SURFACE__;stroke-width:1}
+  .line{stroke:__AXIS__;stroke-width:1.7;fill:none}
+  .paint{stroke:__GRID__;stroke-width:1.7;fill:none}
+  .arc{stroke:__BALL__;stroke-width:4;fill:none;stroke-linecap:round;
+       stroke-dasharray:14 10}
+  .rim{stroke:__BALL__;stroke-width:4.2;stroke-linecap:round}
+  .net{stroke:__AXIS__;stroke-width:1.4;fill:none}
+  .hex{stroke:__SURFACE__;stroke-width:1.1}
 
   /* The mask rect is full width by default, so a stylesheet that never loads
      leaves the court visible rather than erased. Nothing starts at zero. */
-  .wipe{transform-origin:center;animation:wipe 1s cubic-bezier(.2,.75,.3,1) .1s both}
+  .wipe{transform-origin:center;animation:wipe 1.05s cubic-bezier(.2,.75,.3,1) .12s both}
   @keyframes wipe{from{transform:scaleX(.02)}to{transform:scaleX(1)}}
-  .courtline{opacity:.4;animation:ink .5s ease-out both}
+  .courtline{opacity:.4;animation:ink .55s ease-out both}
   @keyframes ink{to{opacity:1}}
   .hex{opacity:.22;animation:bloom .45s ease-out both}
   @keyframes bloom{from{opacity:.22;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
@@ -133,10 +147,21 @@ _TEMPLATE = r"""
   }
 </style>
 
-<div class="hero">
-  <h1 class="wordmark">Shot Diet</h1>
-  <div class="brandrule"></div>
-  <p class="tag">Is he a good shooter, or does he just get good shots?</p>
+<div class="stage">
+  <div id="court"></div>
+  <div class="mast">
+    <h1 class="wordmark">Shot Diet</h1>
+    <div class="brandrule"></div>
+    <p class="tag">Is he a good shooter, or does he just get good shots?</p>
+  </div>
+</div>
+
+<div class="below">
+  <p class="courtcap">Every shot the NBA took last season, laid on the floor it
+    came from. Each hexagon is a patch of court, bigger where more shots are
+    taken. <b style="color:#1c5cab">Blue</b> pays more than a point a shot,
+    <b style="color:#a83232">red</b> pays less. Dunks pay. The mid-range, that
+    red band, does not.</p>
 
   <div class="step"><span class="num">1</span><p>
     <b>The problem.</b> Some players get handed layups. Others have to create
@@ -147,7 +172,7 @@ _TEMPLATE = r"""
     <b>How we test it.</b> For each of 1,087,633 shots we ask one question:
     <b>what would an average NBA player have scored on this exact shot?</b>
     Same spot on the floor, same type of play, same moment in the game. Then we
-    compare that to what the player actually scored.</p></div>
+    compare that with what the player actually scored.</p></div>
 
   <div class="cols">
     <div>
@@ -164,25 +189,18 @@ _TEMPLATE = r"""
       </table>
       <p class="verdict">__A_FIRST__ scores more per shot. __B_FIRST__ is the
         better shooter. Both are true at the same time.</p>
-      <p class="why"><b>Why it matters.</b> Which shots a player gets is
-        something a coach can change. How well he shoots them mostly is not.
-        This tells a team which half of the problem is worth working on.</p>
     </div>
-
     <div>
-      <div id="court"></div>
-      <p class="ccap">Every shot the league took last season, by where it came
-        from. Each hexagon is a patch of floor, bigger where more shots are
-        taken. <b style="color:#1c5cab">Blue</b> pays more than a point per
-        shot, <b style="color:#a83232">red</b> pays less. Dunks pay. The
-        mid-range, that red band, does not.</p>
+      <p class="why"><b>Why it matters.</b> Which shots a player gets is
+        something a coach can change. How well he shoots them mostly is not, so
+        the split tells a team which half of the problem is worth working on.
+        <br><br><b>What you get.</b> Open <b>Players</b> above for any player's
+        own split, his shot chart, his shooting zone by zone, and which shots he
+        should trade for which. <b>Leaders</b> ranks the league,
+        <b>Teams</b> does the same for all thirty, and <b>Findings</b> shows
+        the evidence behind it.</p>
     </div>
   </div>
-
-  <div class="step doit"><span class="num">3</span><p>
-    <b>What you get.</b> Type any player's name below for his own split, his
-    shot chart, his shooting zone by zone, and which shots he should trade for
-    which.</p></div>
 </div>
 
 <script>
@@ -205,12 +223,19 @@ function colour(pps) {
 }
 
 (function build() {
-  const w = 748, h = 430, ppf = 12.9, hoopY = 358;
+  // The frame extends well above the arc on purpose. Above-the-break threes
+  // reach about 27 feet, so the empty floor only starts past that, and the
+  // masthead needs a band with no hexagons in it at all.
+  const w = 1160, h = 940, ppf = 18.6, hoopY = 828;
   const X = f => w / 2 + f * ppf, Y = f => hoopY - f * ppf;
   const svg = el("svg", { viewBox: "0 0 " + w + " " + h });
 
   const g = el("g", { class: "courtline" });
   g.appendChild(el("line", { x1: X(-25), y1: Y(-5.25), x2: X(25), y2: Y(-5.25),
+                             class: "line" }));
+  g.appendChild(el("line", { x1: X(-25), y1: Y(-5.25), x2: X(-25), y2: 0,
+                             class: "line" }));
+  g.appendChild(el("line", { x1: X(25), y1: Y(-5.25), x2: X(25), y2: 0,
                              class: "line" }));
   g.appendChild(el("rect", { x: X(-8), y: Y(13.75), width: 16 * ppf,
                              height: 19 * ppf, class: "paint" }));
@@ -239,7 +264,7 @@ function colour(pps) {
       const p = el("polygon", { points: pts.join(" "), fill: colour(b.p),
                                 class: "hex" });
       p.style.transformOrigin = cx.toFixed(1) + "px " + cy.toFixed(1) + "px";
-      p.style.animationDelay = (0.42 + i * 0.0022) + "s";
+      p.style.animationDelay = (0.45 + i * 0.0024) + "s";
       hexes.appendChild(p);
     });
   svg.appendChild(hexes);
@@ -263,8 +288,8 @@ function colour(pps) {
   hoop.appendChild(el("line", { x1: X(-3), y1: Y(-4.1), x2: X(3), y2: Y(-4.1),
                                 class: "line" }));
   hoop.appendChild(el("path", { class: "net",
-    d: "M " + X(-0.75) + " " + Y(0) + " L " + X(-0.55) + " " + Y(-1.9) +
-       " L " + X(0.55) + " " + Y(-1.9) + " L " + X(0.75) + " " + Y(0) }));
+    d: "M " + X(-0.75) + " " + Y(0) + " L " + X(-0.55) + " " + Y(-2.1) +
+       " L " + X(0.55) + " " + Y(-2.1) + " L " + X(0.75) + " " + Y(0) }));
   hoop.appendChild(el("line", { x1: X(-0.75), y1: Y(0), x2: X(0.75), y2: Y(0),
                                 class: "rim" }));
   svg.appendChild(hoop);
@@ -276,7 +301,7 @@ function colour(pps) {
 
 
 def render(height: int = HEIGHT) -> None:
-    """Draw the landing hero."""
+    """Draw the landing page."""
     html = _TEMPLATE.replace("__BINS__", _bins())
     ex = _example()
     if ex:
