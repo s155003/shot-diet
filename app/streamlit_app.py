@@ -127,9 +127,10 @@ if page == "Players":
             ui.kicker("Shot Diet")
             ui.title("Look up any NBA player")
         ui.legend([
-            ("Selection", "what his shot diet is worth in league-average hands"),
-            ("Making", "what he added on top of that diet"),
-            ("Both", "points per 100 shots, against the league that season"),
+            ("Selection", "how good the shots he took were"),
+            ("Making", "how well he made them, against what an average NBA "
+                       "player would"),
+            ("Both", "points per 100 shots, versus the league that season"),
         ])
 
     if who is None:

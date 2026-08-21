@@ -114,7 +114,8 @@ def test_landing_explains_itself() -> None:
 
     at = run("Players")
     assert 'class="legend"' in body(at), "no column glossary on the landing page"
-    assert "better shooter" in hero._TEMPLATE, "hero lost the plain-English pitch"
+    assert "good shooter" in hero._TEMPLATE, "hero lost the plain-English pitch"
+    assert "splits his scoring in two" in hero._TEMPLATE, "hero never says what it does"
 
 
 def test_hero_stands_down_once_a_player_is_chosen() -> None:
