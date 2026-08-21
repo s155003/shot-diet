@@ -26,7 +26,7 @@ import streamlit as st
 import theme as T
 from data_access import PROCESSED
 
-HEIGHT = 392
+HEIGHT = 442
 
 
 def _bins() -> str:
@@ -46,9 +46,15 @@ _TEMPLATE = r"""
         align-items:center;gap:22px;padding:20px 28px}
   .kick{font-size:.66rem;letter-spacing:.15em;text-transform:uppercase;
         color:__MUTED__;font-weight:620;margin:0 0 11px}
-  h1{font-size:1.68rem;line-height:1.18;letter-spacing:-.02em;font-weight:680;
-     color:__INK__;margin:0 0 12px;max-width:24ch}
-  .sub{color:__INK2__;font-size:.95rem;line-height:1.58;max-width:46ch;margin:0}
+  /* The wordmark sits over a dashed rule in the ball colour, echoing the
+     three-point line beside it, so the identity and the graphic are the same
+     idea rather than two unrelated marks. */
+  .wordmark{font-size:2.45rem;line-height:1;letter-spacing:-.035em;font-weight:720;
+            color:__INK__;margin:0}
+  .brandrule{height:0;border-top:3px dashed __BALL__;width:104px;margin:11px 0 13px}
+  .tag{font-size:1.06rem;line-height:1.32;letter-spacing:-.012em;font-weight:640;
+       color:__INK__;margin:0 0 11px;max-width:28ch}
+  .sub{color:__INK2__;font-size:.92rem;line-height:1.56;max-width:48ch;margin:0}
   .sub b{color:__INK__;font-weight:640}
   .sub2{color:__MUTED__;font-size:.76rem;margin:14px 0 0;letter-spacing:.02em}
   .courtwrap{display:flex;flex-direction:column;gap:6px}
@@ -57,7 +63,7 @@ _TEMPLATE = r"""
   /* Fixed height, not auto: the iframe height is a constant, so a width-scaling
      SVG would either clip on a wide viewport or leave dead space on a narrow
      one. preserveAspectRatio letterboxes inside this box instead. */
-  svg{display:block;width:100%;height:262px}
+  svg{display:block;width:100%;height:300px}
 
   .line{stroke:__AXIS__;stroke-width:1.5;fill:none}
   .paint{stroke:__GRID__;stroke-width:1.5;fill:none}
@@ -83,12 +89,14 @@ _TEMPLATE = r"""
 
 <div class="hero">
   <div>
-    <p class="kick">Shot Diet</p>
-    <h1>Is he a good shooter, or does he just get good shots?</h1>
+    <h1 class="wordmark">Shot Diet</h1>
+    <div class="brandrule"></div>
+    <p class="tag">Is he a good shooter, or does he just get good shots?</p>
     <p class="sub">Two players can score exactly the same while one takes layups
       and the other takes contested jumpers. A box score cannot tell them apart.
-      <b>Search any NBA player and this splits his scoring in two:</b> the quality
-      of the shots he took, and how well he made them.</p>
+      <b>Type any NBA player's name</b> and Shot Diet splits his scoring in two:
+      how good his shots were, and how well he made them. You get a shot chart,
+      his shooting zone by zone, and what to change about his shot mix.</p>
     <p class="sub2">1,087,633 shots &middot; five seasons &middot; every player and team</p>
   </div>
   <div class="courtwrap">
