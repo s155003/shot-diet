@@ -117,8 +117,16 @@ def test_landing_explains_itself() -> None:
     assert "Shot Diet" in hero._TEMPLATE, "hero lost the project name"
     assert "wordmark" in hero._TEMPLATE, "project name is not the hero element"
     assert "good shooter" in hero._TEMPLATE, "hero lost the plain-English pitch"
-    assert "splits his scoring in two" in hero._TEMPLATE, "hero never says what it does"
     assert "shot chart" in hero._TEMPLATE, "hero never says what you get"
+    # The idea only lands with a concrete comparison, so the worked example is
+    # part of the explanation rather than decoration.
+    assert 'class="ex"' in hero._TEMPLATE, "hero lost the worked example"
+    assert "worse shooter" in hero._TEMPLATE, "example lost its punchline"
+    ex = hero._example()
+    assert set(ex) == {"a", "b"}, ex
+    assert ex["a"]["scored"] > ex["b"]["scored"], "player A should score more"
+    assert (ex["a"]["scored"] - ex["a"]["worth"]) < 0 < (
+        ex["b"]["scored"] - ex["b"]["worth"]), "the contrast no longer holds"
 
 
 def test_hero_stands_down_once_a_player_is_chosen() -> None:

@@ -26,7 +26,34 @@ import streamlit as st
 import theme as T
 from data_access import PROCESSED
 
-HEIGHT = 442
+HEIGHT = 486
+
+
+def _example() -> dict:
+    """The two players the pitch is built on, read live so it cannot go stale.
+
+    Gobert and Doncic are the clearest case in the league: Gobert scores more
+    per shot and is the worse shooter, which is the entire idea in one row.
+    """
+    import unicodedata
+
+    import pandas as pd
+
+    ps = pd.read_parquet(PROCESSED / "player_season.parquet")
+    latest = sorted(ps["SEASON"].astype(str).unique())[-1]   # SEASON is an
+    d = ps[ps["SEASON"].astype(str) == latest]               # unordered category
+    ascii_name = d["PLAYER_NAME"].map(
+        lambda s: "".join(c for c in unicodedata.normalize("NFKD", s)
+                          if not unicodedata.combining(c)))
+    out = {}
+    for key, want in (("a", "Rudy Gobert"), ("b", "Luka Doncic")):
+        row = d[ascii_name == want]
+        if row.empty:
+            return {}
+        r = row.iloc[0]
+        out[key] = {"name": r["PLAYER_NAME"], "worth": float(r["xpps"]),
+                    "scored": float(r["pps"])}
+    return out
 
 
 def _bins() -> str:
@@ -42,7 +69,7 @@ _TEMPLATE = r"""
   html,body{margin:0;padding:0;background:__PLANE__;
             font-family:__FONT__;-webkit-font-smoothing:antialiased}
   .hero{background:__SURFACE__;border:1px solid rgba(11,11,11,.12);border-radius:3px;
-        display:grid;grid-template-columns:minmax(0,38%) minmax(0,62%);
+        display:grid;grid-template-columns:minmax(0,46%) minmax(0,54%);
         align-items:center;gap:22px;padding:20px 28px}
   .kick{font-size:.66rem;letter-spacing:.15em;text-transform:uppercase;
         color:__MUTED__;font-weight:620;margin:0 0 11px}
@@ -54,16 +81,28 @@ _TEMPLATE = r"""
   .brandrule{height:0;border-top:3px dashed __BALL__;width:104px;margin:11px 0 13px}
   .tag{font-size:1.06rem;line-height:1.32;letter-spacing:-.012em;font-weight:640;
        color:__INK__;margin:0 0 11px;max-width:28ch}
-  .sub{color:__INK2__;font-size:.92rem;line-height:1.56;max-width:48ch;margin:0}
+  .sub{color:__INK2__;font-size:.9rem;line-height:1.55;max-width:50ch;margin:0}
   .sub b{color:__INK__;font-weight:640}
   .sub2{color:__MUTED__;font-size:.76rem;margin:14px 0 0;letter-spacing:.02em}
-  .courtwrap{display:flex;flex-direction:column;gap:6px}
+  .ex{border-collapse:collapse;margin:13px 0;font-variant-numeric:tabular-nums;
+      font-size:.83rem;width:100%;max-width:400px}
+  .ex thead th{color:__MUTED__;font-size:.6rem;font-weight:660;line-height:1.25;
+               letter-spacing:.07em;text-transform:uppercase;text-align:right;
+               padding:0 9px 5px;border-bottom:1px solid __GRID__;white-space:nowrap}
+  .ex th.l,.ex td.l{text-align:left}
+  .ex td{padding:7px 9px;text-align:right;color:__INK__;white-space:nowrap}
+  .ex td.l:first-child{font-weight:640}
+  .ex tbody tr+tr td{border-top:1px solid __GRID__}
+  .ex .pos{color:#1c5cab;font-weight:620;font-size:.76rem}
+  .ex .neg{color:#a83232;font-weight:620;font-size:.76rem}
+  .courtwrap{display:flex;flex-direction:column;gap:6px;align-self:start;
+              padding-top:6px}
   .ccap{color:__MUTED__;font-size:.73rem;line-height:1.5;margin:0;max-width:60ch}
   .ccap b{font-weight:640}
   /* Fixed height, not auto: the iframe height is a constant, so a width-scaling
      SVG would either clip on a wide viewport or leave dead space on a narrow
      one. preserveAspectRatio letterboxes inside this box instead. */
-  svg{display:block;width:100%;height:300px}
+  svg{display:block;width:100%;height:274px}
 
   .line{stroke:__AXIS__;stroke-width:1.5;fill:none}
   .paint{stroke:__GRID__;stroke-width:1.5;fill:none}
@@ -92,12 +131,26 @@ _TEMPLATE = r"""
     <h1 class="wordmark">Shot Diet</h1>
     <div class="brandrule"></div>
     <p class="tag">Is he a good shooter, or does he just get good shots?</p>
-    <p class="sub">Two players can score exactly the same while one takes layups
-      and the other takes contested jumpers. A box score cannot tell them apart.
-      <b>Type any NBA player's name</b> and Shot Diet splits his scoring in two:
-      how good his shots were, and how well he made them. You get a shot chart,
-      his shooting zone by zone, and what to change about his shot mix.</p>
-    <p class="sub2">1,087,633 shots &middot; five seasons &middot; every player and team</p>
+    <p class="sub">__A_NAME__ scores more per shot than __B_NAME__. He is also
+      the worse shooter. Both are true, and a box score shows neither.</p>
+
+    <table class="ex">
+      <thead><tr><th class="l"></th><th>His shots<br>were worth</th>
+        <th>He actually<br>scored</th><th class="l"></th></tr></thead>
+      <tbody>
+        <tr><td class="l">__A_NAME__</td><td>__A_WORTH__</td>
+            <td>__A_SCORED__</td><td class="l neg">__A_DIFF__ below</td></tr>
+        <tr><td class="l">__B_NAME__</td><td>__B_WORTH__</td>
+            <td>__B_SCORED__</td><td class="l pos">__B_DIFF__ above</td></tr>
+      </tbody>
+    </table>
+
+    <p class="sub">__A_FIRST__ only takes dunks, so an average NBA player would
+      have scored <b>__A_WORTH__</b> on his shots. He managed __A_SCORED__.
+      __B_FIRST__ takes contested jumpers worth <b>__B_WORTH__</b>, and got
+      __B_SCORED__ out of them.
+      <b>Type any player's name</b> to see his own split, a shot chart, and what
+      to change about his shot mix.</p>
   </div>
   <div class="courtwrap">
     <div id="court"></div>
@@ -201,6 +254,17 @@ function colour(pps) {
 def render(height: int = HEIGHT) -> None:
     """Draw the landing hero."""
     html = _TEMPLATE.replace("__BINS__", _bins())
+    ex = _example()
+    if ex:
+        for k, tag in (("a", "A"), ("b", "B")):
+            p = ex[k]
+            diff = p["scored"] - p["worth"]
+            html = (html
+                    .replace(f"__{tag}_NAME__", p["name"])
+                    .replace(f"__{tag}_FIRST__", p["name"].split()[0])
+                    .replace(f"__{tag}_WORTH__", f"{p['worth']:.2f}")
+                    .replace(f"__{tag}_SCORED__", f"{p['scored']:.2f}")
+                    .replace(f"__{tag}_DIFF__", f"{abs(diff):.2f}"))
     for key, val in (
         ("__SURFACE__", T.SURFACE), ("__PLANE__", T.PLANE), ("__INK__", T.INK),
         ("__INK2__", T.INK_2), ("__MUTED__", T.MUTED), ("__GRID__", T.GRID),
