@@ -121,7 +121,11 @@ def test_landing_explains_itself() -> None:
     # The idea only lands with a concrete comparison, so the worked example is
     # part of the explanation rather than decoration.
     assert 'class="ex"' in hero._TEMPLATE, "hero lost the worked example"
-    assert "worse shooter" in hero._TEMPLATE, "example lost its punchline"
+    assert "better shooter" in hero._TEMPLATE, "example lost its punchline"
+    assert "Both are true" in hero._TEMPLATE, "example lost the contradiction"
+    # the counterfactual is the mechanism; without it the numbers come from nowhere
+    assert "what would an average NBA player have scored" in hero._TEMPLATE, (
+        "hero never explains how it knows what a shot was worth")
     ex = hero._example()
     assert set(ex) == {"a", "b"}, ex
     assert ex["a"]["scored"] > ex["b"]["scored"], "player A should score more"

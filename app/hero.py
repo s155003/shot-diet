@@ -1,58 +1,59 @@
-"""Landing hero: a half-court drawn from real shot data.
+"""Landing hero: what the product is, in the order a stranger needs it.
 
-The one idea: a half-court that draws its own three-point line, then fills with
-every shot of the season, sized by how often the league shoots from there and
-coloured by what those shots are worth.
+Structure is problem, method, evidence, consequence. Earlier versions stated the
+concept ("scoring split into shot quality and shot making") and readers did not
+follow, because a concept gives no reason to believe the two halves can come
+apart. Two changes fixed that:
 
-That is what keeps it off the banned list. Decorative animation reads as
-generated; this is the product's own chart, so the striking element on the page
-is real information rather than an effect.
+* **Say how it knows.** The page states the counterfactual outright: for every
+  shot, what would an average NBA player have scored on that exact shot?
+  Without that sentence "his shots were worth 1.45" is a number from nowhere,
+  and that was the single largest gap in comprehension.
+* **Show it happening.** Gobert outscores Doncic and is the worse shooter. Until
+  a reader watches four real numbers do that, the idea sounds like wordplay.
 
-Two things worth knowing before changing it:
-
-* Colour is centred on **one point per attempt**, not on league average points
-  per shot. League average is 1.09, dragged upward by the rim's enormous volume,
-  so centring there paints almost the whole floor red and the picture stops
-  meaning anything. One point per shot is a natural, explainable midpoint.
-* Hex area scales with volume, capped at the 78th percentile. Uniform hexes were
-  tried and produce a solid wall of colour that buries the court lines.
+The court is the product's own chart rather than decoration, which is the
+written exception to the no-decorative-animation rule in DESIGN.md section 6.2.
+Colour is centred on one point per attempt, not league average points per shot:
+league average is 1.09, dragged upward by the rim's volume, so centring there
+paints nearly the whole floor red and the picture stops meaning anything. Hex
+area scales with volume, capped at the 78th percentile; uniform hexes were tried
+and produce a solid wall that buries the court lines.
 """
 from __future__ import annotations
 
 import json
+import unicodedata
 
+import pandas as pd
 import streamlit as st
 
 import theme as T
 from data_access import PROCESSED
 
-HEIGHT = 486
+HEIGHT = 646
+
+# The pair the pitch rests on. Gobert scores more per shot and is the worse
+# shooter, which is the whole idea in one row.
+PAIR = ("Rudy Gobert", "Luka Doncic")
 
 
 def _example() -> dict:
-    """The two players the pitch is built on, read live so it cannot go stale.
-
-    Gobert and Doncic are the clearest case in the league: Gobert scores more
-    per shot and is the worse shooter, which is the entire idea in one row.
-    """
-    import unicodedata
-
-    import pandas as pd
-
+    """Read the worked example live, so it cannot drift from the data."""
     ps = pd.read_parquet(PROCESSED / "player_season.parquet")
     latest = sorted(ps["SEASON"].astype(str).unique())[-1]   # SEASON is an
     d = ps[ps["SEASON"].astype(str) == latest]               # unordered category
-    ascii_name = d["PLAYER_NAME"].map(
+    plain = d["PLAYER_NAME"].map(
         lambda s: "".join(c for c in unicodedata.normalize("NFKD", s)
                           if not unicodedata.combining(c)))
     out = {}
-    for key, want in (("a", "Rudy Gobert"), ("b", "Luka Doncic")):
-        row = d[ascii_name == want]
+    for key, want in zip(("a", "b"), PAIR):
+        row = d[plain == want]
         if row.empty:
             return {}
         r = row.iloc[0]
         out[key] = {"name": r["PLAYER_NAME"], "worth": float(r["xpps"]),
-                    "scored": float(r["pps"])}
+                    "scored": float(r["pps"]), "fga": int(r["fga"])}
     return out
 
 
@@ -68,52 +69,58 @@ _TEMPLATE = r"""
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;background:__PLANE__;
             font-family:__FONT__;-webkit-font-smoothing:antialiased}
-  .hero{background:__SURFACE__;border:1px solid rgba(11,11,11,.12);border-radius:3px;
-        display:grid;grid-template-columns:minmax(0,46%) minmax(0,54%);
-        align-items:center;gap:22px;padding:20px 28px}
-  .kick{font-size:.66rem;letter-spacing:.15em;text-transform:uppercase;
-        color:__MUTED__;font-weight:620;margin:0 0 11px}
+  .hero{background:__SURFACE__;border:1px solid rgba(11,11,11,.12);
+        border-radius:3px;padding:22px 28px 20px}
+
   /* The wordmark sits over a dashed rule in the ball colour, echoing the
-     three-point line beside it, so the identity and the graphic are the same
-     idea rather than two unrelated marks. */
-  .wordmark{font-size:2.45rem;line-height:1;letter-spacing:-.035em;font-weight:720;
+     three-point line below it, so the identity and the graphic are one idea. */
+  .wordmark{font-size:2.3rem;line-height:1;letter-spacing:-.035em;font-weight:720;
             color:__INK__;margin:0}
-  .brandrule{height:0;border-top:3px dashed __BALL__;width:104px;margin:11px 0 13px}
-  .tag{font-size:1.06rem;line-height:1.32;letter-spacing:-.012em;font-weight:640;
-       color:__INK__;margin:0 0 11px;max-width:28ch}
-  .sub{color:__INK2__;font-size:.9rem;line-height:1.55;max-width:50ch;margin:0}
-  .sub b{color:__INK__;font-weight:640}
-  .sub2{color:__MUTED__;font-size:.76rem;margin:14px 0 0;letter-spacing:.02em}
-  .ex{border-collapse:collapse;margin:13px 0;font-variant-numeric:tabular-nums;
-      font-size:.83rem;width:100%;max-width:400px}
-  .ex thead th{color:__MUTED__;font-size:.6rem;font-weight:660;line-height:1.25;
-               letter-spacing:.07em;text-transform:uppercase;text-align:right;
-               padding:0 9px 5px;border-bottom:1px solid __GRID__;white-space:nowrap}
+  .brandrule{height:0;border-top:3px dashed __BALL__;width:98px;margin:10px 0 12px}
+  .tag{font-size:1.02rem;line-height:1.3;letter-spacing:-.01em;font-weight:640;
+       color:__INK__;margin:0 0 14px;max-width:60ch}
+
+  .step{display:flex;gap:11px;align-items:flex-start;margin:0 0 9px;max-width:82ch}
+  .num{flex:0 0 auto;width:17px;height:17px;border-radius:2px;margin-top:2px;
+       background:__INK__;color:#fff;font-size:.63rem;font-weight:700;
+       display:flex;align-items:center;justify-content:center}
+  .step p{margin:0;color:__INK2__;font-size:.91rem;line-height:1.5}
+  .step b{color:__INK__;font-weight:640}
+
+  .cols{display:grid;grid-template-columns:minmax(0,49%) minmax(0,51%);
+        gap:22px;align-items:start;margin-top:14px}
+
+  .ex{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;
+      font-size:.83rem}
+  .ex thead th{color:__MUTED__;font-size:.57rem;font-weight:660;line-height:1.25;
+               letter-spacing:.06em;text-transform:uppercase;text-align:right;
+               padding:0 8px 5px;border-bottom:1px solid __GRID__;white-space:nowrap}
   .ex th.l,.ex td.l{text-align:left}
-  .ex td{padding:7px 9px;text-align:right;color:__INK__;white-space:nowrap}
+  .ex td{padding:7px 8px;text-align:right;color:__INK__;white-space:nowrap}
   .ex td.l:first-child{font-weight:640}
   .ex tbody tr+tr td{border-top:1px solid __GRID__}
-  .ex .pos{color:#1c5cab;font-weight:620;font-size:.76rem}
-  .ex .neg{color:#a83232;font-weight:620;font-size:.76rem}
-  .courtwrap{display:flex;flex-direction:column;gap:6px;align-self:start;
-              padding-top:6px}
-  .ccap{color:__MUTED__;font-size:.73rem;line-height:1.5;margin:0;max-width:60ch}
+  .pos{color:#1c5cab;font-weight:660}
+  .neg{color:#a83232;font-weight:660}
+  .verdict{margin:11px 0 0;color:__INK__;font-size:.89rem;line-height:1.5;
+           font-weight:600}
+  .why{margin:11px 0 0;color:__INK2__;font-size:.83rem;line-height:1.5;
+       padding-left:11px;border-left:2px solid __GRID__}
+  .doit{margin-top:15px;padding-top:13px;border-top:1px solid __GRID__}
+
+  svg{display:block;width:100%;height:232px}
+  .ccap{color:__MUTED__;font-size:.72rem;line-height:1.45;margin:5px 0 0}
   .ccap b{font-weight:640}
-  /* Fixed height, not auto: the iframe height is a constant, so a width-scaling
-     SVG would either clip on a wide viewport or leave dead space on a narrow
-     one. preserveAspectRatio letterboxes inside this box instead. */
-  svg{display:block;width:100%;height:274px}
 
   .line{stroke:__AXIS__;stroke-width:1.5;fill:none}
   .paint{stroke:__GRID__;stroke-width:1.5;fill:none}
-  .arc{stroke:__BALL__;stroke-width:3.4;fill:none;stroke-linecap:round;
-       stroke-dasharray:12 9}
-  .rim{stroke:__BALL__;stroke-width:3.6;stroke-linecap:round}
+  .arc{stroke:__BALL__;stroke-width:3.2;fill:none;stroke-linecap:round;
+       stroke-dasharray:11 8}
+  .rim{stroke:__BALL__;stroke-width:3.4;stroke-linecap:round}
   .net{stroke:__AXIS__;stroke-width:1.2;fill:none}
   .hex{stroke:__SURFACE__;stroke-width:1}
 
-  /* The mask rect is full width by default, so if this stylesheet never loads
-     the arc stays visible rather than erased. Nothing animates from zero. */
+  /* The mask rect is full width by default, so a stylesheet that never loads
+     leaves the court visible rather than erased. Nothing starts at zero. */
   .wipe{transform-origin:center;animation:wipe 1s cubic-bezier(.2,.75,.3,1) .1s both}
   @keyframes wipe{from{transform:scaleX(.02)}to{transform:scaleX(1)}}
   .courtline{opacity:.4;animation:ink .5s ease-out both}
@@ -127,38 +134,55 @@ _TEMPLATE = r"""
 </style>
 
 <div class="hero">
-  <div>
-    <h1 class="wordmark">Shot Diet</h1>
-    <div class="brandrule"></div>
-    <p class="tag">Is he a good shooter, or does he just get good shots?</p>
-    <p class="sub">__A_NAME__ scores more per shot than __B_NAME__. He is also
-      the worse shooter. Both are true, and a box score shows neither.</p>
+  <h1 class="wordmark">Shot Diet</h1>
+  <div class="brandrule"></div>
+  <p class="tag">Is he a good shooter, or does he just get good shots?</p>
 
-    <table class="ex">
-      <thead><tr><th class="l"></th><th>His shots<br>were worth</th>
-        <th>He actually<br>scored</th><th class="l"></th></tr></thead>
-      <tbody>
-        <tr><td class="l">__A_NAME__</td><td>__A_WORTH__</td>
-            <td>__A_SCORED__</td><td class="l neg">__A_DIFF__ below</td></tr>
-        <tr><td class="l">__B_NAME__</td><td>__B_WORTH__</td>
-            <td>__B_SCORED__</td><td class="l pos">__B_DIFF__ above</td></tr>
-      </tbody>
-    </table>
+  <div class="step"><span class="num">1</span><p>
+    <b>The problem.</b> Some players get handed layups. Others have to create
+    contested jumpers. A box score counts both the same, so it cannot tell a
+    good shooter apart from a player in a good situation.</p></div>
 
-    <p class="sub">__A_FIRST__ only takes dunks, so an average NBA player would
-      have scored <b>__A_WORTH__</b> on his shots. He managed __A_SCORED__.
-      __B_FIRST__ takes contested jumpers worth <b>__B_WORTH__</b>, and got
-      __B_SCORED__ out of them.
-      <b>Type any player's name</b> to see his own split, a shot chart, and what
-      to change about his shot mix.</p>
+  <div class="step"><span class="num">2</span><p>
+    <b>How we test it.</b> For each of 1,087,633 shots we ask one question:
+    <b>what would an average NBA player have scored on this exact shot?</b>
+    Same spot on the floor, same type of play, same moment in the game. Then we
+    compare that to what the player actually scored.</p></div>
+
+  <div class="cols">
+    <div>
+      <table class="ex">
+        <thead><tr><th class="l">Last season</th>
+          <th>An average NBA<br>player would score</th>
+          <th>He actually<br>scored</th><th class="l"></th></tr></thead>
+        <tbody>
+          <tr><td class="l">__A_NAME__</td><td>__A_WORTH__</td>
+              <td>__A_SCORED__</td><td class="l neg">__A_DIFF__ worse</td></tr>
+          <tr><td class="l">__B_NAME__</td><td>__B_WORTH__</td>
+              <td>__B_SCORED__</td><td class="l pos">__B_DIFF__ better</td></tr>
+        </tbody>
+      </table>
+      <p class="verdict">__A_FIRST__ scores more per shot. __B_FIRST__ is the
+        better shooter. Both are true at the same time.</p>
+      <p class="why"><b>Why it matters.</b> Which shots a player gets is
+        something a coach can change. How well he shoots them mostly is not.
+        This tells a team which half of the problem is worth working on.</p>
+    </div>
+
+    <div>
+      <div id="court"></div>
+      <p class="ccap">Every shot the league took last season, by where it came
+        from. Each hexagon is a patch of floor, bigger where more shots are
+        taken. <b style="color:#1c5cab">Blue</b> pays more than a point per
+        shot, <b style="color:#a83232">red</b> pays less. Dunks pay. The
+        mid-range, that red band, does not.</p>
+    </div>
   </div>
-  <div class="courtwrap">
-    <div id="court"></div>
-    <p class="ccap">Where the league shoots from, and what it gets back. Each
-      hexagon is a patch of floor, sized by how often shots come from there.
-      <b style="color:#1c5cab">Blue</b> returns more than a point per attempt,
-      <b style="color:#a83232">red</b> less. The mid-range is the red band.</p>
-  </div>
+
+  <div class="step doit"><span class="num">3</span><p>
+    <b>What you get.</b> Type any player's name below for his own split, his
+    shot chart, his shooting zone by zone, and which shots he should trade for
+    which.</p></div>
 </div>
 
 <script>
@@ -258,13 +282,13 @@ def render(height: int = HEIGHT) -> None:
     if ex:
         for k, tag in (("a", "A"), ("b", "B")):
             p = ex[k]
-            diff = p["scored"] - p["worth"]
             html = (html
-                    .replace(f"__{tag}_NAME__", p["name"])
-                    .replace(f"__{tag}_FIRST__", p["name"].split()[0])
-                    .replace(f"__{tag}_WORTH__", f"{p['worth']:.2f}")
-                    .replace(f"__{tag}_SCORED__", f"{p['scored']:.2f}")
-                    .replace(f"__{tag}_DIFF__", f"{abs(diff):.2f}"))
+                    .replace("__%s_NAME__" % tag, p["name"])
+                    .replace("__%s_FIRST__" % tag, p["name"].split()[0])
+                    .replace("__%s_WORTH__" % tag, "%.2f" % p["worth"])
+                    .replace("__%s_SCORED__" % tag, "%.2f" % p["scored"])
+                    .replace("__%s_DIFF__" % tag,
+                             "%.2f" % abs(p["scored"] - p["worth"])))
     for key, val in (
         ("__SURFACE__", T.SURFACE), ("__PLANE__", T.PLANE), ("__INK__", T.INK),
         ("__INK2__", T.INK_2), ("__MUTED__", T.MUTED), ("__GRID__", T.GRID),
