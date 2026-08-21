@@ -290,6 +290,31 @@ product and then removed. Motion has to be doing work (a loading state, a
 transition that explains where something went); if it exists to be impressive, it
 reads as generated regardless of execution quality.
 
+### 6.2 The one written exception: the landing hero
+
+The landing page carries an animated half-court that draws its three-point line
+and fills with hex bins. That looks like a violation of the rule above, and it
+would be, except for one thing: **the court is the product's own chart, built
+from 218,889 real shots.** The striking element on the page is information, not
+an effect. Strip the data out and it becomes decoration and has to go.
+
+Three constraints keep it honest, and any change has to preserve them:
+
+- **It carries the argument.** Blue at the rim and in the corners, red through
+  the mid-range, is the project's entire finding stated as a picture before a
+  single word of it is read.
+- **Colour is centred on one point per attempt**, not on league average points
+  per shot. League average is 1.09, dragged upward by the rim's volume, so
+  centring there paints nearly the whole floor red and the picture says nothing.
+- **Nothing animates from invisible.** Hexes start at 0.22 opacity and grow from
+  half scale; the arc's reveal mask is full width by default, so a stylesheet
+  that never loads leaves the court visible rather than blank. Everything
+  collapses under `prefers-reduced-motion`.
+
+Uniform hex sizing was tried and rejected: it produces a solid wall of colour
+that buries the court lines. Area scales with volume, capped at the 78th
+percentile.
+
 ### 6.1 Things a finished product actually has
 
 The inverse list. These are unglamorous and their absence is noticeable:

@@ -31,7 +31,12 @@ def body(at: AppTest) -> str:
 @pytest.mark.parametrize("page", PAGES)
 def test_page_renders(page: str) -> None:
     at = run(page)
-    assert '<h1 class="h1">' in body(at), f"{page} rendered no heading"
+    if page == "Players":
+        # The landing masthead lives inside the hero iframe, so the page's own
+        # markdown carries the glossary rather than an h1.
+        assert 'class="legend"' in body(at), "Players rendered no masthead"
+    else:
+        assert '<h1 class="h1">' in body(at), f"{page} rendered no heading"
 
 
 @pytest.mark.parametrize("page", SEARCH_FIRST)
@@ -104,10 +109,34 @@ def test_nav_stays_small() -> None:
 
 
 def test_landing_explains_itself() -> None:
+    """The landing page has to say what the product is before it asks for input."""
+    import hero
+
     at = run("Players")
-    txt = body(at)
-    assert "better shooter" in txt, "no plain-English description on the landing"
-    assert 'class="legend"' in txt, "no column glossary on the landing page"
+    assert 'class="legend"' in body(at), "no column glossary on the landing page"
+    assert "better shooter" in hero._TEMPLATE, "hero lost the plain-English pitch"
+
+
+def test_hero_stands_down_once_a_player_is_chosen() -> None:
+    at = run("Players")
+    at = pick(at, "jokic")
+    assert '<h1 class="h1">' in body(at), "no page heading once the hero steps aside"
+
+
+def test_hero_data_is_real_and_inlined() -> None:
+    """The hero is the product's own chart, not decoration, so it needs data."""
+    import json
+
+    import hero
+
+    data = json.loads(hero._bins())
+    assert data["n_shots"] > 100_000, data["n_shots"]
+    assert len(data["bins"]) > 100, len(data["bins"])
+    pps = [b["p"] for b in data["bins"]]
+    assert min(pps) < 0.9 < max(pps), (min(pps), max(pps))
+    # nothing may animate from invisible
+    assert "from{opacity:.22" in hero._TEMPLATE
+    assert "prefers-reduced-motion" in hero._TEMPLATE
 
 
 def test_no_bare_stat_tiles_anywhere() -> None:

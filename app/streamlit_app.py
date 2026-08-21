@@ -10,6 +10,7 @@ import streamlit as st
 import data_access as D  # noqa: F401  (also puts src/ on the path)
 import charts as C
 import court
+import hero
 import ui
 from analyze import ZONE_POINTS, optimise_diet
 from config import ZONE_ORDER
@@ -108,23 +109,29 @@ with st.sidebar:
 # Players: the landing page. Search, then one player's sheet.
 # ==========================================================================
 if page == "Players":
-    ui.kicker("Shot Diet")
-    ui.title("Look up any NBA player")
-    ui.note(
-        "Two players can score the same. One is a better shooter; the other just "
-        "gets easier shots. Shot Diet reads every shot of the last five seasons and "
-        "splits a player's scoring into those two halves.")
-    ui.legend([
-        ("Selection", "what his shot diet is worth in league-average hands"),
-        ("Making", "what he added on top of that diet"),
-        ("Both", "points per 100 shots, against the league that season"),
-    ])
+    # The masthead is filled in after the search runs, so the hero can stand
+    # down once a player is on screen. A container holds its place in the
+    # layout even though it is populated later.
+    top = st.container()
 
     c = st.columns([1, 3.4])
     season = c[0].selectbox("Season", SEASONS, index=0)
     names = roster(season)
     with c[1]:
         who = player_search(names, "search", season)
+
+    with top:
+        if who is None:
+            hero.render()
+        else:
+            ui.kicker("Shot Diet")
+            ui.title("Look up any NBA player")
+        ui.legend([
+            ("Selection", "what his shot diet is worth in league-average hands"),
+            ("Making", "what he added on top of that diet"),
+            ("Both", "points per 100 shots, against the league that season"),
+        ])
+
     if who is None:
         st.stop()
 
